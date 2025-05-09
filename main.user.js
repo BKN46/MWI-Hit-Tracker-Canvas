@@ -2095,6 +2095,10 @@
 	          } else {
 	            registProjectile(pIndex, monsterIndices[0], hpDiff, true);
 	          }
+	        } else if (hpDiff < 0) {
+	          if (castPlayer > -1) {
+	            registProjectile(castPlayer, pIndex, -hpDiff, false, 'heal', true);
+	          }
 	        }
 	      }
 	    });
@@ -2113,7 +2117,7 @@
 	// #region Main Logic
 
 	// 动画效果
-	function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'default') {
+	function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'default', toPlayer = false) {
 	  if (reversed) {
 	    if (!settingsMap.tracker6.isTrue) {
 	      return null;
@@ -2128,10 +2132,13 @@
 	    const playersContainer = container.children[0];
 	    const effectFrom = playersContainer.children[from];
 	    const monsterContainer = document.querySelector(".BattlePanel_monstersArea__2dzrY").children[0];
-	    const effectTo = monsterContainer.children[to];
+	    const effectTo = toPlayer ? playersContainer.children[to] : monsterContainer.children[to];
 	    const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker" + from];
-	    const lineColor = "rgba(" + trackerSetting.r + ", " + trackerSetting.g + ", " + trackerSetting.b + ", 1)";
+	    let lineColor = "rgba(" + trackerSetting.r + ", " + trackerSetting.g + ", " + trackerSetting.b + ", 1)";
 	    // console.log(`registProjectile: ${abilityHrid} ${hpDiff}`);
+	    if (abilityHrid === 'heal') {
+	      lineColor = "rgba(93, 212, 93, 0.8)";
+	    }
 	    if (!reversed) {
 	      createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid);
 	    } else {
