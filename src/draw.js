@@ -95,8 +95,8 @@ function addDamageHPBar(element, damage) {
     hpBarFront.parentNode.insertBefore(hpBarBack, hpBarFront); // Insert the back bar before the front bar
 
     setTimeout(() => {
-        hpBarBack.style.transform = `scaleX(${currentHp / maxHp})`;
-    }, 100);
+        hpBarBack.style.transform = `scaleX(0)`;
+    }, 200);
 
     setTimeout(() => {
         hpBarBack.remove();
@@ -146,8 +146,25 @@ function updateOnHits() {
     }
 }
 
+
+let fpsStatTime = new Date().getTime();
+let fpsQueue = [];
+let fps = 60;
+
 // 动画循环
 export function animate() {
+    // 计算FPS
+    const now = Date.now();
+    const delta = now - fpsStatTime;
+    fpsStatTime = now;
+    const fpsNow = Math.round(1000 / delta);
+    fpsQueue.push(fpsNow);
+    if (fpsQueue.length > 30) {
+        fpsQueue.shift();
+    }
+    fps = Math.round(fpsQueue.reduce((a, b) => a + b) / fpsQueue.length);
+
+
     // 完全清空画布
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -197,7 +214,13 @@ class Projectile {
         
         // 重新设计飞行时间计算，确保合理
         // const timeInAir = distance / this.initialSpeed / 10;
-        const timeInAir = 80 / this.initialSpeed;
+        let timeInAir = 80 / this.initialSpeed;
+
+        // FPS因子，确保在不同FPS下效果一致
+        console.log(fps);
+        const fpsFactor = Math.min(Math.max(fps / 120, 0.8), 12.5); 
+        this.gravity *= fpsFactor;
+        timeInAir /= fpsFactor;
 
         // 计算初始速度，修正公式确保能够到达目标
         this.velocity = {
