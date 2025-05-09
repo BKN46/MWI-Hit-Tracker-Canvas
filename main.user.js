@@ -1631,6 +1631,46 @@
 	  return canvas;
 	}
 
+	// Update shake animation effect to ensure element returns to original position
+	function applyShakeEffect(element, intensity = 1, duration = 500) {
+	  if (!element) return;
+
+	  // Store the element's original position/transform
+	  const originalTransform = element.style.transform || '';
+	  const originalTransition = element.style.transition || '';
+
+	  // Scale intensity based on size/damage
+	  const scaledIntensity = Math.min(10, intensity);
+
+	  // Apply CSS animation
+	  element.style.transition = 'transform 50ms ease-in-out';
+	  let shakeCount = 0;
+	  const maxShakes = Math.ceil(intensity);
+	  const shakeInterval = 50;
+	  const interval = setInterval(() => {
+	    if (shakeCount >= maxShakes) {
+	      // Ensure element returns to original position
+	      clearInterval(interval);
+	      element.style.transform = originalTransform;
+	      element.style.transition = originalTransition;
+	      return;
+	    }
+
+	    // Random offset for shaking effect
+	    const xOffset = (Math.random() - 0.5) * 2 * scaledIntensity;
+	    const yOffset = (Math.random() - 0.5) * 2 * scaledIntensity;
+	    element.style.transform = `${originalTransform} translate(${xOffset}px, ${yOffset}px)`;
+	    shakeCount++;
+	  }, shakeInterval);
+
+	  // Additional safeguard: ensure element returns to original position after max duration
+	  setTimeout(() => {
+	    clearInterval(interval);
+	    element.style.transform = 'translate(0, 0)';
+	    element.style.transition = originalTransition;
+	  }, shakeInterval * (maxShakes + 1)); // Slightly longer than maxShakes * interval time
+	}
+
 	// 更新和渲染所有爆炸
 	function updateExplosions() {
 	  // 遍历所有活跃的爆炸
@@ -1772,6 +1812,7 @@
 	      y: endY
 	    };
 	    this.otherInfo = otherInfo;
+	    this.shakeApplied = false;
 
 	    // 运动参数 - 向斜上方抛物线轨迹
 	    this.gravity = 0.2; // 重力加速度
@@ -1844,7 +1885,13 @@
 	  isArrived() {
 	    // 判断是否到达目标点 (调整判定距离)
 	    const arrivalDistance = 20;
-	    return Math.hypot(this.x - this.target.x, this.y - this.target.y) < arrivalDistance;
+	    const hasArrived = Math.hypot(this.x - this.target.x, this.y - this.target.y) < arrivalDistance;
+	    if (hasArrived && this.otherInfo.doShake && !this.shakeApplied && this.otherInfo.endElement) {
+	      const shakeIntensity = Math.min(this.sizeScale * 5, 10);
+	      applyShakeEffect(this.otherInfo.endElement, shakeIntensity);
+	      this.shakeApplied = true;
+	    }
+	    return hasArrived;
 	  }
 	  isOutOfBounds() {
 	    return this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height;
@@ -1980,7 +2027,10 @@
 	    start: start,
 	    end: end,
 	    damage: damage,
-	    color: color
+	    color: color,
+	    doShake: damage > 0,
+	    startElement: startElement,
+	    endElement: endElement
 	  };
 	  const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
 	  projectiles.push(projectile);
