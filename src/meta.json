@@ -1,0 +1,8 @@
+{
+  "@match": [
+    "https://www.milkywayidle.com/*"
+  ],
+  "@icon": "https://www.milkywayidle.com/favicon.ico",
+  "@description": "A Tampermonkey script to track MWI hits on Canvas",
+  "@license": "MIT"
+}

@@ -4,8 +4,11 @@
 // @namespace      MWI-Hit-Tracker-Canvas
 // @version        0.8
 // @author         Artintel, BKN46
-// @description    A Tampermonkey script to track MWI hits on Canvas.
+// @description    A Tampermonkey script to track MWI hits on Canvas
+// @icon           https://www.milkywayidle.com/favicon.ico
 // @include        *
+// @match          https://www.milkywayidle.com/*
+// @license        MIT
 // ==/UserScript==
 (function () {
 	'use strict';
