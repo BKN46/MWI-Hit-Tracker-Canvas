@@ -2,7 +2,8 @@
   "@match": [
     "https://www.milkywayidle.com/*"
   ],
-  "@icon": "https://www.milkywayidle.com/favicon.ico",
+  "@icon": "https://www.milkywayidle.com/favicon.svg",
   "@description": "A Tampermonkey script to track MWI hits on Canvas",
-  "@license": "MIT"
+  "@license": "MIT",
+  "@include": "https://*.milkywayidle.com/*"
 }

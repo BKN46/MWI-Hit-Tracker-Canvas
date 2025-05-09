@@ -18,8 +18,6 @@ function initTrackerCanvas() {
     gamePanel.appendChild(canvas);
 
     window.addEventListener('resize', () => {
-        // canvas.width = battlePanel.offsetWidth;
-        // canvas.height = battlePanel.offsetHeight;
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     });
@@ -140,10 +138,6 @@ function updateExplosions() {
 export function animate() {
     // 完全清空画布
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 如果需要残影效果，可以绘制半透明矩形
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // 更新并绘制所有弹丸
     for (let i = projectiles.length - 1; i >= 0; i--) {
