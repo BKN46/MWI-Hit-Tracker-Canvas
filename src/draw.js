@@ -167,230 +167,233 @@ export function animate() {
 }
 
 class Projectile {
-  constructor(startX, startY, endX, endY, color, initialSpeed = 1, size = 10, otherInfo={}) {
-      // 基础属性
-      this.x = startX;
-      this.y = startY;
-      this.start = { x: startX, y: startY };
-      this.target = { x: endX, y: endY };
-      this.otherInfo = otherInfo;
-      
-      // 运动参数 - 向斜上方抛物线轨迹
-      this.gravity = 0.2; // 重力加速度
-      this.initialSpeed = initialSpeed; // 初始速度参数
-      
-      // 计算水平距离和高度差
-      const dx = endX - startX;
-      const dy = endY - startY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      // 重新设计飞行时间计算，确保合理
-      // const timeInAir = distance / this.initialSpeed / 10;
-      const timeInAir = 80 / this.initialSpeed;
+    constructor(startX, startY, endX, endY, color, initialSpeed = 1, size = 10, otherInfo={}) {
+        // 基础属性
+        this.x = startX;
+        this.y = startY;
+        this.start = { x: startX, y: startY };
+        this.target = { x: endX, y: endY };
+        this.otherInfo = otherInfo;
+        
+        // 运动参数 - 向斜上方抛物线轨迹
+        this.gravity = 0.2; // 重力加速度
+        this.initialSpeed = initialSpeed; // 初始速度参数
+        
+        // 计算水平距离和高度差
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // 重新设计飞行时间计算，确保合理
+        // const timeInAir = distance / this.initialSpeed / 10;
+        const timeInAir = 80 / this.initialSpeed;
 
-      // 计算初始速度，修正公式确保能够到达目标
-      this.velocity = {
-          x: dx / timeInAir,
-          y: (dy / timeInAir) - (this.gravity * timeInAir / 2)
-      };
-      
-      // 大小参数 (范围1-100)
-      this.sizeScale = Math.max(1, Math.min(100, size)) / 10; // 转换为比例因子
-      
-      // 外观属性
-      this.size = 10 * this.sizeScale;
-      this.color = color;
-      
-      // 拖尾效果
-      this.trail = [];
-      this.maxTrailLength = Math.floor(50 * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
-  }
+        // 计算初始速度，修正公式确保能够到达目标
+        this.velocity = {
+            x: dx / timeInAir,
+            y: (dy / timeInAir) - (this.gravity * timeInAir / 2)
+        };
+        
+        // 大小参数 (范围1-100)
+        this.sizeScale = Math.max(1, Math.min(100, size)) / 10; // 转换为比例因子
+        
+        // 外观属性
+        this.size = 10 * this.sizeScale;
+        this.color = color;
+        
+        // 拖尾效果
+        this.trail = [];
+        this.maxTrailLength = Math.floor(50 * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
+    }
 
-  update() {
-      // 更新速度 (考虑重力)
-      this.velocity.y += this.gravity;
-      
-      // 更新位置
-      this.x += this.velocity.x;
-      this.y += this.velocity.y;
+    update() {
+        // 更新速度 (考虑重力)
+        this.velocity.y += this.gravity;
+        
+        // 更新位置
+        this.x += this.velocity.x;
+        this.y += this.velocity.y;
 
-      // 更新拖尾
-      this.trail.push({ x: this.x, y: this.y });
-      if(this.trail.length > this.maxTrailLength) {
-          this.trail.shift();
-      }
-  }
+        // 更新拖尾
+        this.trail.push({ x: this.x, y: this.y });
+        if(this.trail.length > this.maxTrailLength) {
+            this.trail.shift();
+        }
+    }
 
-  draw(canvas) {
-      // 绘制拖尾
-      this.trail.forEach((pos, index) => {
-          const alpha = index / this.trail.length;
-          canvas.beginPath();
-          canvas.arc(pos.x, pos.y, this.size * alpha, 0, Math.PI * 2);
-          canvas.fillStyle = `${this.color}`;
-          canvas.fill();
-      });
+    draw(canvas) {
+        // 绘制拖尾
+        this.trail.forEach((pos, index) => {
+            const alpha = index / this.trail.length;
+            canvas.beginPath();
+            canvas.arc(pos.x, pos.y, this.size * alpha, 0, Math.PI * 2);
+            canvas.fillStyle = `${this.color}`;
+            canvas.fill();
+        });
 
-      // 绘制主体
-      canvas.beginPath();
-      canvas.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-      canvas.fillStyle = this.color;
-      canvas.fill();
+        // 绘制主体
+        canvas.beginPath();
+        canvas.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        canvas.fillStyle = this.color;
+        canvas.fill();
 
-      // 添加光晕效果
-      const gradient = canvas.createRadialGradient(
-          this.x, this.y, 0, 
-          this.x, this.y, this.size*2
-      );
-      gradient.addColorStop(0, `${this.color}`);
-      gradient.addColorStop(1, `${this.color}`);
-      canvas.fillStyle = gradient;
-  }
+        // 添加光晕效果
+        const gradient = canvas.createRadialGradient(
+            this.x, this.y, 0, 
+            this.x, this.y, this.size*2
+        );
+        gradient.addColorStop(0, `${this.color}`);
+        gradient.addColorStop(1, `${this.color}`);
+        canvas.fillStyle = gradient;
+    }
 
-  isArrived() {
-      // 判断是否到达目标点 (调整判定距离)
-      const arrivalDistance = 20;
-      return Math.hypot(this.x - this.target.x, this.y - this.target.y) < arrivalDistance;
-  }
+    isArrived() {
+        // 判断是否到达目标点 (调整判定距离)
+        const arrivalDistance = 20;
+        return Math.hypot(this.x - this.target.x, this.y - this.target.y) < arrivalDistance;
+    }
 
-  isOutOfBounds() {
-      return this.x < 0 || this.x > canvas.width || 
-              this.y < 0 || this.y > canvas.height;
-  }
+    isOutOfBounds() {
+        return this.x < 0 || this.x > canvas.width || 
+                this.y < 0 || this.y > canvas.height;
+    }
+    }
+
+    // 项目管理
+    let projectiles = [];
+
+    // 存储所有活跃的爆炸效果
+    let activeExplosions = [];
+
+    // 爆炸效果函数
+    function createExplosion(x, y, color, size = 10, otherInfo = {}) {
+    // 计算爆炸大小比例
+    const sizeScale = Math.max(1, Math.min(100, size)) / 20;
+    
+    // 多种粒子系统
+    const particles = [];
+    const shockwaves = [];
+    const embers = [];
+    const smokeParticles = [];
+    
+    // 主爆炸粒子 - 数量和大小基于sizeScale
+    const particleCount = Math.floor(4 * sizeScale);
+    for(let i = 0; i < particleCount; i++) {
+        particles.push({
+            x, y,
+            angle: Math.random() * Math.PI * 2,
+            speed: (Math.random() * 7 + 3) * Math.sqrt(sizeScale),
+            size: (Math.random() * 12 + 8) * sizeScale,
+            life: 500 * sizeScale, // 生命时间随大小增加
+            // color: `hsl(${Math.floor(Math.random()*60 + 10)}, 100%, 60%)`,
+            color: color,
+            gravity: 0.3 + Math.random() * 0.1
+        });
+    }
+    
+    // 冲击波效果 - 大小基于sizeScale
+    for(let i = 0; i < Math.ceil(sizeScale); i++) {
+        shockwaves.push({
+            x, y,
+            radius: 7 * sizeScale,
+            maxRadius: (100 + Math.random() * 100) * sizeScale,
+            life: 800 * Math.sqrt(sizeScale),
+            // color: `hsla(${Math.floor(Math.random()*30 + 15)}, 100%, 50%, 0.8)`,
+            color: color,
+        });
+    }
+    
+    // 余烬效果 - 数量和大小基于sizeScale
+    const emberCount = Math.floor(20 * sizeScale);
+    for(let i = 0; i < emberCount; i++) {
+        embers.push({
+            x, y,
+            angle: Math.random() * Math.PI * 2,
+            speed: (Math.random() * 2 + 0.5) * Math.sqrt(sizeScale),
+            size: (Math.random() * 6 + 2) * sizeScale,
+            life: 1200 * Math.sqrt(sizeScale),
+            // color: `hsl(${Math.floor(Math.random()*30 + 10)}, 100%, ${Math.floor(Math.random()*50 + 40)}%)`,
+            color: color,
+            gravity: 0.3
+        });
+    }
+    
+    // 烟雾效果 - 数量和大小基于sizeScale
+    const smokeCount = Math.floor(4 * sizeScale);
+    for(let i = 0; i < smokeCount; i++) {
+        smokeParticles.push({
+            x, y,
+            angle: Math.random() * Math.PI * 2,
+            speed: (Math.random() * 1 + 0.2) * Math.sqrt(sizeScale),
+            size: (Math.random() * 15 + 8) * sizeScale,
+            life: 2000 * Math.sqrt(sizeScale),
+            alpha: 0.7,
+            gravity: -1 * Math.sqrt(sizeScale) // 烟雾上升速度基于大小
+        });
+    }
+
+    // 闪光效果
+    function drawFlash() {
+        const flashRadius = 150 * sizeScale;
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, flashRadius);
+        gradient.addColorStop(0, 'rgba(255, 255, 200, 0.8)');
+        gradient.addColorStop(0.1, 'rgba(255, 230, 150, 0.6)');
+        gradient.addColorStop(0.4, 'rgba(255, 100, 50, 0.2)');
+        gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x - flashRadius, y - flashRadius, flashRadius * 2, flashRadius * 2);
+    }
+
+    // 存储爆炸的活跃状态，用于跟踪
+    const explosionData = {
+        particles: [...particles],
+        shockwaves: [...shockwaves],
+        embers: [...embers],
+        smokeParticles: [...smokeParticles],
+        active: true,
+        count: 0,
+        maxCount: 120,
+        otherInfo: otherInfo,
+    };
+    
+    // 将这个爆炸添加到全局爆炸列表中
+    activeExplosions.push(explosionData);
+    
+    // 初始闪光
+    drawFlash();
 }
 
-// 项目管理
-let projectiles = [];
+export function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200, projectileType = 'default') {
+    if (!startElement || !endElement) {
+        return;
+    }
+    const combatUnitContainer = endElement.querySelector(".CombatUnit_splatsContainer__2xcc0");
+    combatUnitContainer.style.visibility = "hidden";
+    const padding = 30;
+    const randomRange = {
+        x: Math.floor((Math.random() * (combatUnitContainer.offsetWidth - 2 * padding)) - combatUnitContainer.offsetWidth / 2 + padding),
+        y: Math.floor((Math.random() * (combatUnitContainer.offsetHeight - 2 * padding)) - combatUnitContainer.offsetHeight / 2 + padding),
+    }
 
-// 存储所有活跃的爆炸效果
-let activeExplosions = [];
+    const projectileLimit = 30;
+    const start = getElementCenter(startElement);
+    const end = getElementCenter(endElement);
+    end.x = Math.floor(end.x + randomRange.x);
+    end.y = Math.floor(end.y + randomRange.y);
 
-// 爆炸效果函数
-function createExplosion(x, y, color, size = 10, otherInfo = {}) {
-  // 计算爆炸大小比例
-  const sizeScale = Math.max(1, Math.min(100, size)) / 20;
-  
-  // 多种粒子系统
-  const particles = [];
-  const shockwaves = [];
-  const embers = [];
-  const smokeParticles = [];
-  
-  // 主爆炸粒子 - 数量和大小基于sizeScale
-  const particleCount = Math.floor(4 * sizeScale);
-  for(let i = 0; i < particleCount; i++) {
-      particles.push({
-          x, y,
-          angle: Math.random() * Math.PI * 2,
-          speed: (Math.random() * 7 + 3) * Math.sqrt(sizeScale),
-          size: (Math.random() * 12 + 8) * sizeScale,
-          life: 500 * sizeScale, // 生命时间随大小增加
-          // color: `hsl(${Math.floor(Math.random()*60 + 10)}, 100%, 60%)`,
-          color: color,
-          gravity: 0.3 + Math.random() * 0.1
-      });
-  }
-  
-  // 冲击波效果 - 大小基于sizeScale
-  for(let i = 0; i < Math.ceil(sizeScale); i++) {
-      shockwaves.push({
-          x, y,
-          radius: 7 * sizeScale,
-          maxRadius: (100 + Math.random() * 100) * sizeScale,
-          life: 800 * Math.sqrt(sizeScale),
-          // color: `hsla(${Math.floor(Math.random()*30 + 15)}, 100%, 50%, 0.8)`,
-          color: color,
-      });
-  }
-  
-  // 余烬效果 - 数量和大小基于sizeScale
-  const emberCount = Math.floor(20 * sizeScale);
-  for(let i = 0; i < emberCount; i++) {
-      embers.push({
-          x, y,
-          angle: Math.random() * Math.PI * 2,
-          speed: (Math.random() * 2 + 0.5) * Math.sqrt(sizeScale),
-          size: (Math.random() * 6 + 2) * sizeScale,
-          life: 1200 * Math.sqrt(sizeScale),
-          // color: `hsl(${Math.floor(Math.random()*30 + 10)}, 100%, ${Math.floor(Math.random()*50 + 40)}%)`,
-          color: color,
-          gravity: 0.3
-      });
-  }
-  
-  // 烟雾效果 - 数量和大小基于sizeScale
-  const smokeCount = Math.floor(4 * sizeScale);
-  for(let i = 0; i < smokeCount; i++) {
-      smokeParticles.push({
-          x, y,
-          angle: Math.random() * Math.PI * 2,
-          speed: (Math.random() * 1 + 0.2) * Math.sqrt(sizeScale),
-          size: (Math.random() * 15 + 8) * sizeScale,
-          life: 2000 * Math.sqrt(sizeScale),
-          alpha: 0.7,
-          gravity: -1 * Math.sqrt(sizeScale) // 烟雾上升速度基于大小
-      });
-  }
-
-  // 闪光效果
-  function drawFlash() {
-      const flashRadius = 150 * sizeScale;
-      const gradient = ctx.createRadialGradient(x, y, 0, x, y, flashRadius);
-      gradient.addColorStop(0, 'rgba(255, 255, 200, 0.8)');
-      gradient.addColorStop(0.1, 'rgba(255, 230, 150, 0.6)');
-      gradient.addColorStop(0.4, 'rgba(255, 100, 50, 0.2)');
-      gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x - flashRadius, y - flashRadius, flashRadius * 2, flashRadius * 2);
-  }
-
-  // 存储爆炸的活跃状态，用于跟踪
-  const explosionData = {
-      particles: [...particles],
-      shockwaves: [...shockwaves],
-      embers: [...embers],
-      smokeParticles: [...smokeParticles],
-      active: true,
-      count: 0,
-      maxCount: 120,
-      otherInfo: otherInfo,
-  };
-  
-  // 将这个爆炸添加到全局爆炸列表中
-  activeExplosions.push(explosionData);
-  
-  // 初始闪光
-  drawFlash();
-}
-
-export function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200) {
-  const combatUnitContainer = endElement.querySelector(".CombatUnit_splatsContainer__2xcc0");
-  combatUnitContainer.style.visibility = "hidden";
-  const padding = 30;
-  const randomRange = {
-      x: Math.floor((Math.random() * (combatUnitContainer.offsetWidth - 2 * padding)) - combatUnitContainer.offsetWidth / 2 + padding),
-      y: Math.floor((Math.random() * (combatUnitContainer.offsetHeight - 2 * padding)) - combatUnitContainer.offsetHeight / 2 + padding),
-  }
-
-  const projectileLimit = 30;
-  const start = getElementCenter(startElement);
-  const end = getElementCenter(endElement);
-  end.x = Math.floor(end.x + randomRange.x);
-  end.y = Math.floor(end.y + randomRange.y);
-
-  const size = Math.min(Math.max(Math.pow(damage+200,0.8)/20, 4), 17)
-  const otherInfo = {
-      start: start,
-      end: end,
-      damage: damage,
-      color: color,
-  }
-  const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
-  projectiles.push(projectile);
-  if (projectiles.length > projectileLimit) {
-      projectiles.shift();
-  }
+    const size = Math.min(Math.max(Math.pow(damage+200,0.8)/20, 4), 17)
+    const otherInfo = {
+        start: start,
+        end: end,
+        damage: damage,
+        color: color,
+    }
+    const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
+    projectiles.push(projectile);
+    if (projectiles.length > projectileLimit) {
+        projectiles.shift();
+    }
 }
 
 function getElementCenter(element) {

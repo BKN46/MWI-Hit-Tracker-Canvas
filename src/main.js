@@ -2,13 +2,8 @@ import { waitForSetttins, settingsMap } from "./setting.js";
 import { animate, createProjectile } from "./draw.js";
 
 // #region Setting
-/* 脚本设置面板 */
 waitForSetttins();
 
-let monstersHP = [];
-let monstersMP = [];
-let playersHP = [];
-let playersMP = [];
 hookWS();
 
 // #region Hook WS
@@ -35,6 +30,12 @@ function hookWS() {
     }
 }
 
+let monstersHP = [];
+let monstersMP = [];
+let playersHP = [];
+let playersMP = [];
+let playersAbility = [];
+
 function handleMessage(message) {
     let obj = JSON.parse(message);
     if (obj && obj.type === "new_battle") {
@@ -57,6 +58,7 @@ function handleMessage(message) {
         playerIndices.forEach((userIndex) => {
             if(pMap[userIndex].cMP < playersMP[userIndex]){castPlayer = userIndex;}
             playersMP[userIndex] = pMap[userIndex].cMP;
+            if(pMap[userIndex].abilityHrid){playersAbility[userIndex] = pMap[userIndex].abilityHrid;}
         });
 
         monstersHP.forEach((mHP, mIndex) => {
@@ -68,11 +70,11 @@ function handleMessage(message) {
                     if (playerIndices.length > 1) {
                         playerIndices.forEach((userIndex) => {
                             if(userIndex === castPlayer) {
-                                createLine(userIndex, mIndex, hpDiff);
+                                registProjectile(userIndex, mIndex, hpDiff, false, playersAbility[userIndex]);
                             }
                         });
                     } else {
-                        createLine(playerIndices[0], mIndex, hpDiff);
+                        registProjectile(playerIndices[0], mIndex, hpDiff, false , playersAbility[playerIndices[0]]);
                     }
                 }
             }
@@ -87,16 +89,22 @@ function handleMessage(message) {
                     if (monsterIndices.length > 1) {
                         monsterIndices.forEach((monsterIndex) => {
                             if(monsterIndex === castMonster) {
-                                createLine(pIndex, monsterIndex, hpDiff, true);
+                                registProjectile(pIndex, monsterIndex, hpDiff, true);
                             }
                         });
                     } else {
-                        createLine(pIndex, monsterIndices[0], hpDiff, true);
+                        registProjectile(pIndex, monsterIndices[0], hpDiff, true);
                     }
                 }
             }
         });
 
+    } else if (obj && obj.type === "battle_updated") {
+        const pMap = obj.pMap;
+        const playerIndices = Object.keys(obj.pMap);
+        playerIndices.forEach((userIndex) => {
+            if(pMap[userIndex].abilityHrid){playersAbility[userIndex] = pMap[userIndex].abilityHrid;}
+        });
     }
     return message;
 }
@@ -104,7 +112,7 @@ function handleMessage(message) {
 // #region Main Logic
 
 // 动画效果
-function createLine(from, to, hpDiff, reversed = false) {
+function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'default') {
     if (reversed){
         if (!settingsMap.tracker6.isTrue) {
             return null;
@@ -123,13 +131,12 @@ function createLine(from, to, hpDiff, reversed = false) {
 
         const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker"+from];
         const lineColor = "rgba("+trackerSetting.r+", "+trackerSetting.g+", "+trackerSetting.b+", 1)";
-        createProjectile(
-            effectFrom,
-            effectTo,
-            lineColor,
-            1,
-            hpDiff,
-        )
+        // console.log(`registProjectile: ${abilityHrid} ${hpDiff}`);
+        if (!reversed) {
+            createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid);
+        } else {
+            createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid);
+        }
     }
 
 }
