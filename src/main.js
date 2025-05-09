@@ -1,0 +1,138 @@
+import { waitForSetttins, settingsMap } from "./setting.js";
+import { animate, createProjectile } from "./draw.js";
+
+// #region Setting
+/* 脚本设置面板 */
+waitForSetttins();
+
+let monstersHP = [];
+let monstersMP = [];
+let playersHP = [];
+let playersMP = [];
+hookWS();
+
+// #region Hook WS
+function hookWS() {
+    const dataProperty = Object.getOwnPropertyDescriptor(MessageEvent.prototype, "data");
+    const oriGet = dataProperty.get;
+
+    dataProperty.get = hookedGet;
+    Object.defineProperty(MessageEvent.prototype, "data", dataProperty);
+
+    function hookedGet() {
+        const socket = this.currentTarget;
+        if (!(socket instanceof WebSocket)) {
+            return oriGet.call(this);
+        }
+        if (socket.url.indexOf("api.milkywayidle.com/ws") <= -1 && socket.url.indexOf("api-test.milkywayidle.com/ws") <= -1) {
+            return oriGet.call(this);
+        }
+
+        const message = oriGet.call(this);
+        Object.defineProperty(this, "data", { value: message }); // Anti-loop
+
+        return handleMessage(message);
+    }
+}
+
+function handleMessage(message) {
+    let obj = JSON.parse(message);
+    if (obj && obj.type === "new_battle") {
+        monstersHP = obj.monsters.map((monster) => monster.currentHitpoints);
+        monstersMP = obj.monsters.map((monster) => monster.currentManapoints);
+        playersHP = obj.players.map((player) => player.currentHitpoints);
+        playersMP = obj.players.map((player) => player.currentManapoints);
+    } else if (obj && obj.type === "battle_updated" && monstersHP.length) {
+        const mMap = obj.mMap;
+        const pMap = obj.pMap;
+        const monsterIndices = Object.keys(obj.mMap);
+        const playerIndices = Object.keys(obj.pMap);
+
+        let castMonster = -1;
+        monsterIndices.forEach((monsterIndex) => {
+            if(mMap[monsterIndex].cMP < monstersMP[monsterIndex]){castMonster = monsterIndex;}
+            monstersMP[monsterIndex] = mMap[monsterIndex].cMP;
+        });
+        let castPlayer = -1;
+        playerIndices.forEach((userIndex) => {
+            if(pMap[userIndex].cMP < playersMP[userIndex]){castPlayer = userIndex;}
+            playersMP[userIndex] = pMap[userIndex].cMP;
+        });
+
+        monstersHP.forEach((mHP, mIndex) => {
+            const monster = mMap[mIndex];
+            if (monster) {
+                const hpDiff = mHP - monster.cHP;
+                monstersHP[mIndex] = monster.cHP;
+                if (hpDiff > 0 && playerIndices.length > 0) {
+                    if (playerIndices.length > 1) {
+                        playerIndices.forEach((userIndex) => {
+                            if(userIndex === castPlayer) {
+                                createLine(userIndex, mIndex, hpDiff);
+                            }
+                        });
+                    } else {
+                        createLine(playerIndices[0], mIndex, hpDiff);
+                    }
+                }
+            }
+        });
+
+        playersHP.forEach((pHP, pIndex) => {
+            const player = pMap[pIndex];
+            if (player) {
+                const hpDiff = pHP - player.cHP;
+                playersHP[pIndex] = player.cHP;
+                if (hpDiff > 0 && monsterIndices.length > 0) {
+                    if (monsterIndices.length > 1) {
+                        monsterIndices.forEach((monsterIndex) => {
+                            if(monsterIndex === castMonster) {
+                                createLine(pIndex, monsterIndex, hpDiff, true);
+                            }
+                        });
+                    } else {
+                        createLine(pIndex, monsterIndices[0], hpDiff, true);
+                    }
+                }
+            }
+        });
+
+    }
+    return message;
+}
+
+// #region Main Logic
+
+// 动画效果
+function createLine(from, to, hpDiff, reversed = false) {
+    if (reversed){
+        if (!settingsMap.tracker6.isTrue) {
+            return null;
+        }
+    } else {
+        if (!settingsMap["tracker"+from].isTrue) {
+            return null;
+        }
+    }
+    const container = document.querySelector(".BattlePanel_playersArea__vvwlB");
+    if (container && container.children.length > 0) {
+        const playersContainer = container.children[0];
+        const effectFrom = playersContainer.children[from];
+        const monsterContainer = document.querySelector(".BattlePanel_monstersArea__2dzrY").children[0];
+        const effectTo = monsterContainer.children[to];
+
+        const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker"+from];
+        const lineColor = "rgba("+trackerSetting.r+", "+trackerSetting.g+", "+trackerSetting.b+", 1)";
+        createProjectile(
+            effectFrom,
+            effectTo,
+            lineColor,
+            1,
+            hpDiff,
+        )
+    }
+
+}
+
+// 启动动画
+animate();

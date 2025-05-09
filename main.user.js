@@ -1,0 +1,2130 @@
+
+// ==UserScript==
+// @name           MWI-Hit-Tracker-Canvas
+// @namespace      MWI-Hit-Tracker-Canvas
+// @version        0.8
+// @author         Artintel, BKN46
+// @description    A Tampermonkey script to track MWI hits on Canvas.
+// @include        *
+// ==/UserScript==
+(function () {
+	'use strict';
+
+	var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+	var check = function (it) {
+	  return it && it.Math == Math && it;
+	};
+
+	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
+	var global$c =
+	  // eslint-disable-next-line es/no-global-this -- safe
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  // eslint-disable-next-line no-restricted-globals -- safe
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
+	  // eslint-disable-next-line no-new-func -- fallback
+	  (function () { return this; })() || Function('return this')();
+
+	var objectGetOwnPropertyDescriptor = {};
+
+	var fails$8 = function (exec) {
+	  try {
+	    return !!exec();
+	  } catch (error) {
+	    return true;
+	  }
+	};
+
+	var fails$7 = fails$8;
+
+	// Detect IE8's incomplete defineProperty implementation
+	var descriptors = !fails$7(function () {
+	  // eslint-disable-next-line es/no-object-defineproperty -- required for testing
+	  return Object.defineProperty({}, 1, { get: function () { return 7; } })[1] != 7;
+	});
+
+	var objectPropertyIsEnumerable = {};
+
+	var $propertyIsEnumerable = {}.propertyIsEnumerable;
+	// eslint-disable-next-line es/no-object-getownpropertydescriptor -- safe
+	var getOwnPropertyDescriptor$1 = Object.getOwnPropertyDescriptor;
+
+	// Nashorn ~ JDK8 bug
+	var NASHORN_BUG = getOwnPropertyDescriptor$1 && !$propertyIsEnumerable.call({ 1: 2 }, 1);
+
+	// `Object.prototype.propertyIsEnumerable` method implementation
+	// https://tc39.es/ecma262/#sec-object.prototype.propertyisenumerable
+	objectPropertyIsEnumerable.f = NASHORN_BUG ? function propertyIsEnumerable(V) {
+	  var descriptor = getOwnPropertyDescriptor$1(this, V);
+	  return !!descriptor && descriptor.enumerable;
+	} : $propertyIsEnumerable;
+
+	var createPropertyDescriptor$2 = function (bitmap, value) {
+	  return {
+	    enumerable: !(bitmap & 1),
+	    configurable: !(bitmap & 2),
+	    writable: !(bitmap & 4),
+	    value: value
+	  };
+	};
+
+	var toString = {}.toString;
+
+	var classofRaw$1 = function (it) {
+	  return toString.call(it).slice(8, -1);
+	};
+
+	var fails$6 = fails$8;
+	var classof$2 = classofRaw$1;
+
+	var split = ''.split;
+
+	// fallback for non-array-like ES3 and non-enumerable old V8 strings
+	var indexedObject = fails$6(function () {
+	  // throws an error in rhino, see https://github.com/mozilla/rhino/issues/346
+	  // eslint-disable-next-line no-prototype-builtins -- safe
+	  return !Object('z').propertyIsEnumerable(0);
+	}) ? function (it) {
+	  return classof$2(it) == 'String' ? split.call(it, '') : Object(it);
+	} : Object;
+
+	// `RequireObjectCoercible` abstract operation
+	// https://tc39.es/ecma262/#sec-requireobjectcoercible
+	var requireObjectCoercible$2 = function (it) {
+	  if (it == undefined) throw TypeError("Can't call method on " + it);
+	  return it;
+	};
+
+	// toObject with fallback for non-array-like ES3 strings
+	var IndexedObject = indexedObject;
+	var requireObjectCoercible$1 = requireObjectCoercible$2;
+
+	var toIndexedObject$3 = function (it) {
+	  return IndexedObject(requireObjectCoercible$1(it));
+	};
+
+	// `IsCallable` abstract operation
+	// https://tc39.es/ecma262/#sec-iscallable
+	var isCallable$d = function (argument) {
+	  return typeof argument === 'function';
+	};
+
+	var isCallable$c = isCallable$d;
+
+	var isObject$5 = function (it) {
+	  return typeof it === 'object' ? it !== null : isCallable$c(it);
+	};
+
+	var global$b = global$c;
+	var isCallable$b = isCallable$d;
+
+	var aFunction = function (argument) {
+	  return isCallable$b(argument) ? argument : undefined;
+	};
+
+	var getBuiltIn$4 = function (namespace, method) {
+	  return arguments.length < 2 ? aFunction(global$b[namespace]) : global$b[namespace] && global$b[namespace][method];
+	};
+
+	var getBuiltIn$3 = getBuiltIn$4;
+
+	var engineUserAgent = getBuiltIn$3('navigator', 'userAgent') || '';
+
+	var global$a = global$c;
+	var userAgent = engineUserAgent;
+
+	var process = global$a.process;
+	var Deno = global$a.Deno;
+	var versions = process && process.versions || Deno && Deno.version;
+	var v8 = versions && versions.v8;
+	var match, version;
+
+	if (v8) {
+	  match = v8.split('.');
+	  version = match[0] < 4 ? 1 : match[0] + match[1];
+	} else if (userAgent) {
+	  match = userAgent.match(/Edge\/(\d+)/);
+	  if (!match || match[1] >= 74) {
+	    match = userAgent.match(/Chrome\/(\d+)/);
+	    if (match) version = match[1];
+	  }
+	}
+
+	var engineV8Version = version && +version;
+
+	/* eslint-disable es/no-symbol -- required for testing */
+
+	var V8_VERSION = engineV8Version;
+	var fails$5 = fails$8;
+
+	// eslint-disable-next-line es/no-object-getownpropertysymbols -- required for testing
+	var nativeSymbol = !!Object.getOwnPropertySymbols && !fails$5(function () {
+	  var symbol = Symbol();
+	  // Chrome 38 Symbol has incorrect toString conversion
+	  // `get-own-property-symbols` polyfill symbols converted to object are not Symbol instances
+	  return !String(symbol) || !(Object(symbol) instanceof Symbol) ||
+	    // Chrome 38-40 symbols are not inherited from DOM collections prototypes to instances
+	    !Symbol.sham && V8_VERSION && V8_VERSION < 41;
+	});
+
+	/* eslint-disable es/no-symbol -- required for testing */
+
+	var NATIVE_SYMBOL$1 = nativeSymbol;
+
+	var useSymbolAsUid = NATIVE_SYMBOL$1
+	  && !Symbol.sham
+	  && typeof Symbol.iterator == 'symbol';
+
+	var isCallable$a = isCallable$d;
+	var getBuiltIn$2 = getBuiltIn$4;
+	var USE_SYMBOL_AS_UID$1 = useSymbolAsUid;
+
+	var isSymbol$2 = USE_SYMBOL_AS_UID$1 ? function (it) {
+	  return typeof it == 'symbol';
+	} : function (it) {
+	  var $Symbol = getBuiltIn$2('Symbol');
+	  return isCallable$a($Symbol) && Object(it) instanceof $Symbol;
+	};
+
+	var tryToString$1 = function (argument) {
+	  try {
+	    return String(argument);
+	  } catch (error) {
+	    return 'Object';
+	  }
+	};
+
+	var isCallable$9 = isCallable$d;
+	var tryToString = tryToString$1;
+
+	// `Assert: IsCallable(argument) is true`
+	var aCallable$5 = function (argument) {
+	  if (isCallable$9(argument)) return argument;
+	  throw TypeError(tryToString(argument) + ' is not a function');
+	};
+
+	var aCallable$4 = aCallable$5;
+
+	// `GetMethod` abstract operation
+	// https://tc39.es/ecma262/#sec-getmethod
+	var getMethod$4 = function (V, P) {
+	  var func = V[P];
+	  return func == null ? undefined : aCallable$4(func);
+	};
+
+	var isCallable$8 = isCallable$d;
+	var isObject$4 = isObject$5;
+
+	// `OrdinaryToPrimitive` abstract operation
+	// https://tc39.es/ecma262/#sec-ordinarytoprimitive
+	var ordinaryToPrimitive$1 = function (input, pref) {
+	  var fn, val;
+	  if (pref === 'string' && isCallable$8(fn = input.toString) && !isObject$4(val = fn.call(input))) return val;
+	  if (isCallable$8(fn = input.valueOf) && !isObject$4(val = fn.call(input))) return val;
+	  if (pref !== 'string' && isCallable$8(fn = input.toString) && !isObject$4(val = fn.call(input))) return val;
+	  throw TypeError("Can't convert object to primitive value");
+	};
+
+	var shared$3 = {exports: {}};
+
+	var global$9 = global$c;
+
+	var setGlobal$3 = function (key, value) {
+	  try {
+	    // eslint-disable-next-line es/no-object-defineproperty -- safe
+	    Object.defineProperty(global$9, key, { value: value, configurable: true, writable: true });
+	  } catch (error) {
+	    global$9[key] = value;
+	  } return value;
+	};
+
+	var global$8 = global$c;
+	var setGlobal$2 = setGlobal$3;
+
+	var SHARED = '__core-js_shared__';
+	var store$3 = global$8[SHARED] || setGlobal$2(SHARED, {});
+
+	var sharedStore = store$3;
+
+	var store$2 = sharedStore;
+
+	(shared$3.exports = function (key, value) {
+	  return store$2[key] || (store$2[key] = value !== undefined ? value : {});
+	})('versions', []).push({
+	  version: '3.18.3',
+	  mode: 'global',
+	  copyright: '© 2021 Denis Pushkarev (zloirock.ru)'
+	});
+
+	var requireObjectCoercible = requireObjectCoercible$2;
+
+	// `ToObject` abstract operation
+	// https://tc39.es/ecma262/#sec-toobject
+	var toObject$2 = function (argument) {
+	  return Object(requireObjectCoercible(argument));
+	};
+
+	var toObject$1 = toObject$2;
+
+	var hasOwnProperty = {}.hasOwnProperty;
+
+	// `HasOwnProperty` abstract operation
+	// https://tc39.es/ecma262/#sec-hasownproperty
+	var hasOwnProperty_1 = Object.hasOwn || function hasOwn(it, key) {
+	  return hasOwnProperty.call(toObject$1(it), key);
+	};
+
+	var id = 0;
+	var postfix = Math.random();
+
+	var uid$2 = function (key) {
+	  return 'Symbol(' + String(key === undefined ? '' : key) + ')_' + (++id + postfix).toString(36);
+	};
+
+	var global$7 = global$c;
+	var shared$2 = shared$3.exports;
+	var hasOwn$8 = hasOwnProperty_1;
+	var uid$1 = uid$2;
+	var NATIVE_SYMBOL = nativeSymbol;
+	var USE_SYMBOL_AS_UID = useSymbolAsUid;
+
+	var WellKnownSymbolsStore = shared$2('wks');
+	var Symbol$1 = global$7.Symbol;
+	var createWellKnownSymbol = USE_SYMBOL_AS_UID ? Symbol$1 : Symbol$1 && Symbol$1.withoutSetter || uid$1;
+
+	var wellKnownSymbol$8 = function (name) {
+	  if (!hasOwn$8(WellKnownSymbolsStore, name) || !(NATIVE_SYMBOL || typeof WellKnownSymbolsStore[name] == 'string')) {
+	    if (NATIVE_SYMBOL && hasOwn$8(Symbol$1, name)) {
+	      WellKnownSymbolsStore[name] = Symbol$1[name];
+	    } else {
+	      WellKnownSymbolsStore[name] = createWellKnownSymbol('Symbol.' + name);
+	    }
+	  } return WellKnownSymbolsStore[name];
+	};
+
+	var isObject$3 = isObject$5;
+	var isSymbol$1 = isSymbol$2;
+	var getMethod$3 = getMethod$4;
+	var ordinaryToPrimitive = ordinaryToPrimitive$1;
+	var wellKnownSymbol$7 = wellKnownSymbol$8;
+
+	var TO_PRIMITIVE = wellKnownSymbol$7('toPrimitive');
+
+	// `ToPrimitive` abstract operation
+	// https://tc39.es/ecma262/#sec-toprimitive
+	var toPrimitive$1 = function (input, pref) {
+	  if (!isObject$3(input) || isSymbol$1(input)) return input;
+	  var exoticToPrim = getMethod$3(input, TO_PRIMITIVE);
+	  var result;
+	  if (exoticToPrim) {
+	    if (pref === undefined) pref = 'default';
+	    result = exoticToPrim.call(input, pref);
+	    if (!isObject$3(result) || isSymbol$1(result)) return result;
+	    throw TypeError("Can't convert object to primitive value");
+	  }
+	  if (pref === undefined) pref = 'number';
+	  return ordinaryToPrimitive(input, pref);
+	};
+
+	var toPrimitive = toPrimitive$1;
+	var isSymbol = isSymbol$2;
+
+	// `ToPropertyKey` abstract operation
+	// https://tc39.es/ecma262/#sec-topropertykey
+	var toPropertyKey$2 = function (argument) {
+	  var key = toPrimitive(argument, 'string');
+	  return isSymbol(key) ? key : String(key);
+	};
+
+	var global$6 = global$c;
+	var isObject$2 = isObject$5;
+
+	var document$1 = global$6.document;
+	// typeof document.createElement is 'object' in old IE
+	var EXISTS$1 = isObject$2(document$1) && isObject$2(document$1.createElement);
+
+	var documentCreateElement$1 = function (it) {
+	  return EXISTS$1 ? document$1.createElement(it) : {};
+	};
+
+	var DESCRIPTORS$5 = descriptors;
+	var fails$4 = fails$8;
+	var createElement = documentCreateElement$1;
+
+	// Thank's IE8 for his funny defineProperty
+	var ie8DomDefine = !DESCRIPTORS$5 && !fails$4(function () {
+	  // eslint-disable-next-line es/no-object-defineproperty -- requied for testing
+	  return Object.defineProperty(createElement('div'), 'a', {
+	    get: function () { return 7; }
+	  }).a != 7;
+	});
+
+	var DESCRIPTORS$4 = descriptors;
+	var propertyIsEnumerableModule = objectPropertyIsEnumerable;
+	var createPropertyDescriptor$1 = createPropertyDescriptor$2;
+	var toIndexedObject$2 = toIndexedObject$3;
+	var toPropertyKey$1 = toPropertyKey$2;
+	var hasOwn$7 = hasOwnProperty_1;
+	var IE8_DOM_DEFINE$1 = ie8DomDefine;
+
+	// eslint-disable-next-line es/no-object-getownpropertydescriptor -- safe
+	var $getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+
+	// `Object.getOwnPropertyDescriptor` method
+	// https://tc39.es/ecma262/#sec-object.getownpropertydescriptor
+	objectGetOwnPropertyDescriptor.f = DESCRIPTORS$4 ? $getOwnPropertyDescriptor : function getOwnPropertyDescriptor(O, P) {
+	  O = toIndexedObject$2(O);
+	  P = toPropertyKey$1(P);
+	  if (IE8_DOM_DEFINE$1) try {
+	    return $getOwnPropertyDescriptor(O, P);
+	  } catch (error) { /* empty */ }
+	  if (hasOwn$7(O, P)) return createPropertyDescriptor$1(!propertyIsEnumerableModule.f.call(O, P), O[P]);
+	};
+
+	var objectDefineProperty = {};
+
+	var isObject$1 = isObject$5;
+
+	// `Assert: Type(argument) is Object`
+	var anObject$b = function (argument) {
+	  if (isObject$1(argument)) return argument;
+	  throw TypeError(String(argument) + ' is not an object');
+	};
+
+	var DESCRIPTORS$3 = descriptors;
+	var IE8_DOM_DEFINE = ie8DomDefine;
+	var anObject$a = anObject$b;
+	var toPropertyKey = toPropertyKey$2;
+
+	// eslint-disable-next-line es/no-object-defineproperty -- safe
+	var $defineProperty = Object.defineProperty;
+
+	// `Object.defineProperty` method
+	// https://tc39.es/ecma262/#sec-object.defineproperty
+	objectDefineProperty.f = DESCRIPTORS$3 ? $defineProperty : function defineProperty(O, P, Attributes) {
+	  anObject$a(O);
+	  P = toPropertyKey(P);
+	  anObject$a(Attributes);
+	  if (IE8_DOM_DEFINE) try {
+	    return $defineProperty(O, P, Attributes);
+	  } catch (error) { /* empty */ }
+	  if ('get' in Attributes || 'set' in Attributes) throw TypeError('Accessors not supported');
+	  if ('value' in Attributes) O[P] = Attributes.value;
+	  return O;
+	};
+
+	var DESCRIPTORS$2 = descriptors;
+	var definePropertyModule$2 = objectDefineProperty;
+	var createPropertyDescriptor = createPropertyDescriptor$2;
+
+	var createNonEnumerableProperty$5 = DESCRIPTORS$2 ? function (object, key, value) {
+	  return definePropertyModule$2.f(object, key, createPropertyDescriptor(1, value));
+	} : function (object, key, value) {
+	  object[key] = value;
+	  return object;
+	};
+
+	var redefine$3 = {exports: {}};
+
+	var isCallable$7 = isCallable$d;
+	var store$1 = sharedStore;
+
+	var functionToString = Function.toString;
+
+	// this helper broken in `core-js@3.4.1-3.4.4`, so we can't use `shared` helper
+	if (!isCallable$7(store$1.inspectSource)) {
+	  store$1.inspectSource = function (it) {
+	    return functionToString.call(it);
+	  };
+	}
+
+	var inspectSource$2 = store$1.inspectSource;
+
+	var global$5 = global$c;
+	var isCallable$6 = isCallable$d;
+	var inspectSource$1 = inspectSource$2;
+
+	var WeakMap$1 = global$5.WeakMap;
+
+	var nativeWeakMap = isCallable$6(WeakMap$1) && /native code/.test(inspectSource$1(WeakMap$1));
+
+	var shared$1 = shared$3.exports;
+	var uid = uid$2;
+
+	var keys = shared$1('keys');
+
+	var sharedKey$3 = function (key) {
+	  return keys[key] || (keys[key] = uid(key));
+	};
+
+	var hiddenKeys$4 = {};
+
+	var NATIVE_WEAK_MAP = nativeWeakMap;
+	var global$4 = global$c;
+	var isObject = isObject$5;
+	var createNonEnumerableProperty$4 = createNonEnumerableProperty$5;
+	var hasOwn$6 = hasOwnProperty_1;
+	var shared = sharedStore;
+	var sharedKey$2 = sharedKey$3;
+	var hiddenKeys$3 = hiddenKeys$4;
+
+	var OBJECT_ALREADY_INITIALIZED = 'Object already initialized';
+	var WeakMap = global$4.WeakMap;
+	var set, get, has;
+
+	var enforce = function (it) {
+	  return has(it) ? get(it) : set(it, {});
+	};
+
+	var getterFor = function (TYPE) {
+	  return function (it) {
+	    var state;
+	    if (!isObject(it) || (state = get(it)).type !== TYPE) {
+	      throw TypeError('Incompatible receiver, ' + TYPE + ' required');
+	    } return state;
+	  };
+	};
+
+	if (NATIVE_WEAK_MAP || shared.state) {
+	  var store = shared.state || (shared.state = new WeakMap());
+	  var wmget = store.get;
+	  var wmhas = store.has;
+	  var wmset = store.set;
+	  set = function (it, metadata) {
+	    if (wmhas.call(store, it)) throw new TypeError(OBJECT_ALREADY_INITIALIZED);
+	    metadata.facade = it;
+	    wmset.call(store, it, metadata);
+	    return metadata;
+	  };
+	  get = function (it) {
+	    return wmget.call(store, it) || {};
+	  };
+	  has = function (it) {
+	    return wmhas.call(store, it);
+	  };
+	} else {
+	  var STATE = sharedKey$2('state');
+	  hiddenKeys$3[STATE] = true;
+	  set = function (it, metadata) {
+	    if (hasOwn$6(it, STATE)) throw new TypeError(OBJECT_ALREADY_INITIALIZED);
+	    metadata.facade = it;
+	    createNonEnumerableProperty$4(it, STATE, metadata);
+	    return metadata;
+	  };
+	  get = function (it) {
+	    return hasOwn$6(it, STATE) ? it[STATE] : {};
+	  };
+	  has = function (it) {
+	    return hasOwn$6(it, STATE);
+	  };
+	}
+
+	var internalState = {
+	  set: set,
+	  get: get,
+	  has: has,
+	  enforce: enforce,
+	  getterFor: getterFor
+	};
+
+	var DESCRIPTORS$1 = descriptors;
+	var hasOwn$5 = hasOwnProperty_1;
+
+	var FunctionPrototype = Function.prototype;
+	// eslint-disable-next-line es/no-object-getownpropertydescriptor -- safe
+	var getDescriptor = DESCRIPTORS$1 && Object.getOwnPropertyDescriptor;
+
+	var EXISTS = hasOwn$5(FunctionPrototype, 'name');
+	// additional protection from minified / mangled / dropped function names
+	var PROPER = EXISTS && (function something() { /* empty */ }).name === 'something';
+	var CONFIGURABLE = EXISTS && (!DESCRIPTORS$1 || (DESCRIPTORS$1 && getDescriptor(FunctionPrototype, 'name').configurable));
+
+	var functionName = {
+	  EXISTS: EXISTS,
+	  PROPER: PROPER,
+	  CONFIGURABLE: CONFIGURABLE
+	};
+
+	var global$3 = global$c;
+	var isCallable$5 = isCallable$d;
+	var hasOwn$4 = hasOwnProperty_1;
+	var createNonEnumerableProperty$3 = createNonEnumerableProperty$5;
+	var setGlobal$1 = setGlobal$3;
+	var inspectSource = inspectSource$2;
+	var InternalStateModule$1 = internalState;
+	var CONFIGURABLE_FUNCTION_NAME = functionName.CONFIGURABLE;
+
+	var getInternalState$1 = InternalStateModule$1.get;
+	var enforceInternalState = InternalStateModule$1.enforce;
+	var TEMPLATE = String(String).split('String');
+
+	(redefine$3.exports = function (O, key, value, options) {
+	  var unsafe = options ? !!options.unsafe : false;
+	  var simple = options ? !!options.enumerable : false;
+	  var noTargetGet = options ? !!options.noTargetGet : false;
+	  var name = options && options.name !== undefined ? options.name : key;
+	  var state;
+	  if (isCallable$5(value)) {
+	    if (String(name).slice(0, 7) === 'Symbol(') {
+	      name = '[' + String(name).replace(/^Symbol\(([^)]*)\)/, '$1') + ']';
+	    }
+	    if (!hasOwn$4(value, 'name') || (CONFIGURABLE_FUNCTION_NAME && value.name !== name)) {
+	      createNonEnumerableProperty$3(value, 'name', name);
+	    }
+	    state = enforceInternalState(value);
+	    if (!state.source) {
+	      state.source = TEMPLATE.join(typeof name == 'string' ? name : '');
+	    }
+	  }
+	  if (O === global$3) {
+	    if (simple) O[key] = value;
+	    else setGlobal$1(key, value);
+	    return;
+	  } else if (!unsafe) {
+	    delete O[key];
+	  } else if (!noTargetGet && O[key]) {
+	    simple = true;
+	  }
+	  if (simple) O[key] = value;
+	  else createNonEnumerableProperty$3(O, key, value);
+	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
+	})(Function.prototype, 'toString', function toString() {
+	  return isCallable$5(this) && getInternalState$1(this).source || inspectSource(this);
+	});
+
+	var objectGetOwnPropertyNames = {};
+
+	var ceil = Math.ceil;
+	var floor = Math.floor;
+
+	// `ToIntegerOrInfinity` abstract operation
+	// https://tc39.es/ecma262/#sec-tointegerorinfinity
+	var toIntegerOrInfinity$2 = function (argument) {
+	  var number = +argument;
+	  // eslint-disable-next-line no-self-compare -- safe
+	  return number !== number || number === 0 ? 0 : (number > 0 ? floor : ceil)(number);
+	};
+
+	var toIntegerOrInfinity$1 = toIntegerOrInfinity$2;
+
+	var max = Math.max;
+	var min$1 = Math.min;
+
+	// Helper for a popular repeating case of the spec:
+	// Let integer be ? ToInteger(index).
+	// If integer < 0, let result be max((length + integer), 0); else let result be min(integer, length).
+	var toAbsoluteIndex$1 = function (index, length) {
+	  var integer = toIntegerOrInfinity$1(index);
+	  return integer < 0 ? max(integer + length, 0) : min$1(integer, length);
+	};
+
+	var toIntegerOrInfinity = toIntegerOrInfinity$2;
+
+	var min = Math.min;
+
+	// `ToLength` abstract operation
+	// https://tc39.es/ecma262/#sec-tolength
+	var toLength$1 = function (argument) {
+	  return argument > 0 ? min(toIntegerOrInfinity(argument), 0x1FFFFFFFFFFFFF) : 0; // 2 ** 53 - 1 == 9007199254740991
+	};
+
+	var toLength = toLength$1;
+
+	// `LengthOfArrayLike` abstract operation
+	// https://tc39.es/ecma262/#sec-lengthofarraylike
+	var lengthOfArrayLike$2 = function (obj) {
+	  return toLength(obj.length);
+	};
+
+	var toIndexedObject$1 = toIndexedObject$3;
+	var toAbsoluteIndex = toAbsoluteIndex$1;
+	var lengthOfArrayLike$1 = lengthOfArrayLike$2;
+
+	// `Array.prototype.{ indexOf, includes }` methods implementation
+	var createMethod = function (IS_INCLUDES) {
+	  return function ($this, el, fromIndex) {
+	    var O = toIndexedObject$1($this);
+	    var length = lengthOfArrayLike$1(O);
+	    var index = toAbsoluteIndex(fromIndex, length);
+	    var value;
+	    // Array#includes uses SameValueZero equality algorithm
+	    // eslint-disable-next-line no-self-compare -- NaN check
+	    if (IS_INCLUDES && el != el) while (length > index) {
+	      value = O[index++];
+	      // eslint-disable-next-line no-self-compare -- NaN check
+	      if (value != value) return true;
+	    // Array#indexOf ignores holes, Array#includes - not
+	    } else for (;length > index; index++) {
+	      if ((IS_INCLUDES || index in O) && O[index] === el) return IS_INCLUDES || index || 0;
+	    } return !IS_INCLUDES && -1;
+	  };
+	};
+
+	var arrayIncludes = {
+	  // `Array.prototype.includes` method
+	  // https://tc39.es/ecma262/#sec-array.prototype.includes
+	  includes: createMethod(true),
+	  // `Array.prototype.indexOf` method
+	  // https://tc39.es/ecma262/#sec-array.prototype.indexof
+	  indexOf: createMethod(false)
+	};
+
+	var hasOwn$3 = hasOwnProperty_1;
+	var toIndexedObject = toIndexedObject$3;
+	var indexOf = arrayIncludes.indexOf;
+	var hiddenKeys$2 = hiddenKeys$4;
+
+	var objectKeysInternal = function (object, names) {
+	  var O = toIndexedObject(object);
+	  var i = 0;
+	  var result = [];
+	  var key;
+	  for (key in O) !hasOwn$3(hiddenKeys$2, key) && hasOwn$3(O, key) && result.push(key);
+	  // Don't enum bug & hidden keys
+	  while (names.length > i) if (hasOwn$3(O, key = names[i++])) {
+	    ~indexOf(result, key) || result.push(key);
+	  }
+	  return result;
+	};
+
+	// IE8- don't enum bug keys
+	var enumBugKeys$3 = [
+	  'constructor',
+	  'hasOwnProperty',
+	  'isPrototypeOf',
+	  'propertyIsEnumerable',
+	  'toLocaleString',
+	  'toString',
+	  'valueOf'
+	];
+
+	var internalObjectKeys$1 = objectKeysInternal;
+	var enumBugKeys$2 = enumBugKeys$3;
+
+	var hiddenKeys$1 = enumBugKeys$2.concat('length', 'prototype');
+
+	// `Object.getOwnPropertyNames` method
+	// https://tc39.es/ecma262/#sec-object.getownpropertynames
+	// eslint-disable-next-line es/no-object-getownpropertynames -- safe
+	objectGetOwnPropertyNames.f = Object.getOwnPropertyNames || function getOwnPropertyNames(O) {
+	  return internalObjectKeys$1(O, hiddenKeys$1);
+	};
+
+	var objectGetOwnPropertySymbols = {};
+
+	// eslint-disable-next-line es/no-object-getownpropertysymbols -- safe
+	objectGetOwnPropertySymbols.f = Object.getOwnPropertySymbols;
+
+	var getBuiltIn$1 = getBuiltIn$4;
+	var getOwnPropertyNamesModule = objectGetOwnPropertyNames;
+	var getOwnPropertySymbolsModule = objectGetOwnPropertySymbols;
+	var anObject$9 = anObject$b;
+
+	// all object keys, includes non-enumerable and symbols
+	var ownKeys$1 = getBuiltIn$1('Reflect', 'ownKeys') || function ownKeys(it) {
+	  var keys = getOwnPropertyNamesModule.f(anObject$9(it));
+	  var getOwnPropertySymbols = getOwnPropertySymbolsModule.f;
+	  return getOwnPropertySymbols ? keys.concat(getOwnPropertySymbols(it)) : keys;
+	};
+
+	var hasOwn$2 = hasOwnProperty_1;
+	var ownKeys = ownKeys$1;
+	var getOwnPropertyDescriptorModule = objectGetOwnPropertyDescriptor;
+	var definePropertyModule$1 = objectDefineProperty;
+
+	var copyConstructorProperties$1 = function (target, source) {
+	  var keys = ownKeys(source);
+	  var defineProperty = definePropertyModule$1.f;
+	  var getOwnPropertyDescriptor = getOwnPropertyDescriptorModule.f;
+	  for (var i = 0; i < keys.length; i++) {
+	    var key = keys[i];
+	    if (!hasOwn$2(target, key)) defineProperty(target, key, getOwnPropertyDescriptor(source, key));
+	  }
+	};
+
+	var fails$3 = fails$8;
+	var isCallable$4 = isCallable$d;
+
+	var replacement = /#|\.prototype\./;
+
+	var isForced$1 = function (feature, detection) {
+	  var value = data[normalize(feature)];
+	  return value == POLYFILL ? true
+	    : value == NATIVE ? false
+	    : isCallable$4(detection) ? fails$3(detection)
+	    : !!detection;
+	};
+
+	var normalize = isForced$1.normalize = function (string) {
+	  return String(string).replace(replacement, '.').toLowerCase();
+	};
+
+	var data = isForced$1.data = {};
+	var NATIVE = isForced$1.NATIVE = 'N';
+	var POLYFILL = isForced$1.POLYFILL = 'P';
+
+	var isForced_1 = isForced$1;
+
+	var global$2 = global$c;
+	var getOwnPropertyDescriptor = objectGetOwnPropertyDescriptor.f;
+	var createNonEnumerableProperty$2 = createNonEnumerableProperty$5;
+	var redefine$2 = redefine$3.exports;
+	var setGlobal = setGlobal$3;
+	var copyConstructorProperties = copyConstructorProperties$1;
+	var isForced = isForced_1;
+
+	/*
+	  options.target      - name of the target object
+	  options.global      - target is the global object
+	  options.stat        - export as static methods of target
+	  options.proto       - export as prototype methods of target
+	  options.real        - real prototype method for the `pure` version
+	  options.forced      - export even if the native feature is available
+	  options.bind        - bind methods to the target, required for the `pure` version
+	  options.wrap        - wrap constructors to preventing global pollution, required for the `pure` version
+	  options.unsafe      - use the simple assignment of property instead of delete + defineProperty
+	  options.sham        - add a flag to not completely full polyfills
+	  options.enumerable  - export as enumerable property
+	  options.noTargetGet - prevent calling a getter on target
+	  options.name        - the .name of the function if it does not match the key
+	*/
+	var _export = function (options, source) {
+	  var TARGET = options.target;
+	  var GLOBAL = options.global;
+	  var STATIC = options.stat;
+	  var FORCED, target, key, targetProperty, sourceProperty, descriptor;
+	  if (GLOBAL) {
+	    target = global$2;
+	  } else if (STATIC) {
+	    target = global$2[TARGET] || setGlobal(TARGET, {});
+	  } else {
+	    target = (global$2[TARGET] || {}).prototype;
+	  }
+	  if (target) for (key in source) {
+	    sourceProperty = source[key];
+	    if (options.noTargetGet) {
+	      descriptor = getOwnPropertyDescriptor(target, key);
+	      targetProperty = descriptor && descriptor.value;
+	    } else targetProperty = target[key];
+	    FORCED = isForced(GLOBAL ? key : TARGET + (STATIC ? '.' : '#') + key, options.forced);
+	    // contained in target
+	    if (!FORCED && targetProperty !== undefined) {
+	      if (typeof sourceProperty === typeof targetProperty) continue;
+	      copyConstructorProperties(sourceProperty, targetProperty);
+	    }
+	    // add a flag to not completely full polyfills
+	    if (options.sham || (targetProperty && targetProperty.sham)) {
+	      createNonEnumerableProperty$2(sourceProperty, 'sham', true);
+	    }
+	    // extend global
+	    redefine$2(target, key, sourceProperty, options);
+	  }
+	};
+
+	var anInstance$1 = function (it, Constructor, name) {
+	  if (it instanceof Constructor) return it;
+	  throw TypeError('Incorrect ' + (name ? name + ' ' : '') + 'invocation');
+	};
+
+	var internalObjectKeys = objectKeysInternal;
+	var enumBugKeys$1 = enumBugKeys$3;
+
+	// `Object.keys` method
+	// https://tc39.es/ecma262/#sec-object.keys
+	// eslint-disable-next-line es/no-object-keys -- safe
+	var objectKeys$1 = Object.keys || function keys(O) {
+	  return internalObjectKeys(O, enumBugKeys$1);
+	};
+
+	var DESCRIPTORS = descriptors;
+	var definePropertyModule = objectDefineProperty;
+	var anObject$8 = anObject$b;
+	var objectKeys = objectKeys$1;
+
+	// `Object.defineProperties` method
+	// https://tc39.es/ecma262/#sec-object.defineproperties
+	// eslint-disable-next-line es/no-object-defineproperties -- safe
+	var objectDefineProperties = DESCRIPTORS ? Object.defineProperties : function defineProperties(O, Properties) {
+	  anObject$8(O);
+	  var keys = objectKeys(Properties);
+	  var length = keys.length;
+	  var index = 0;
+	  var key;
+	  while (length > index) definePropertyModule.f(O, key = keys[index++], Properties[key]);
+	  return O;
+	};
+
+	var getBuiltIn = getBuiltIn$4;
+
+	var html$1 = getBuiltIn('document', 'documentElement');
+
+	/* global ActiveXObject -- old IE, WSH */
+
+	var anObject$7 = anObject$b;
+	var defineProperties = objectDefineProperties;
+	var enumBugKeys = enumBugKeys$3;
+	var hiddenKeys = hiddenKeys$4;
+	var html = html$1;
+	var documentCreateElement = documentCreateElement$1;
+	var sharedKey$1 = sharedKey$3;
+
+	var GT = '>';
+	var LT = '<';
+	var PROTOTYPE = 'prototype';
+	var SCRIPT = 'script';
+	var IE_PROTO$1 = sharedKey$1('IE_PROTO');
+
+	var EmptyConstructor = function () { /* empty */ };
+
+	var scriptTag = function (content) {
+	  return LT + SCRIPT + GT + content + LT + '/' + SCRIPT + GT;
+	};
+
+	// Create object with fake `null` prototype: use ActiveX Object with cleared prototype
+	var NullProtoObjectViaActiveX = function (activeXDocument) {
+	  activeXDocument.write(scriptTag(''));
+	  activeXDocument.close();
+	  var temp = activeXDocument.parentWindow.Object;
+	  activeXDocument = null; // avoid memory leak
+	  return temp;
+	};
+
+	// Create object with fake `null` prototype: use iframe Object with cleared prototype
+	var NullProtoObjectViaIFrame = function () {
+	  // Thrash, waste and sodomy: IE GC bug
+	  var iframe = documentCreateElement('iframe');
+	  var JS = 'java' + SCRIPT + ':';
+	  var iframeDocument;
+	  iframe.style.display = 'none';
+	  html.appendChild(iframe);
+	  // https://github.com/zloirock/core-js/issues/475
+	  iframe.src = String(JS);
+	  iframeDocument = iframe.contentWindow.document;
+	  iframeDocument.open();
+	  iframeDocument.write(scriptTag('document.F=Object'));
+	  iframeDocument.close();
+	  return iframeDocument.F;
+	};
+
+	// Check for document.domain and active x support
+	// No need to use active x approach when document.domain is not set
+	// see https://github.com/es-shims/es5-shim/issues/150
+	// variation of https://github.com/kitcambridge/es5-shim/commit/4f738ac066346
+	// avoid IE GC bug
+	var activeXDocument;
+	var NullProtoObject = function () {
+	  try {
+	    activeXDocument = new ActiveXObject('htmlfile');
+	  } catch (error) { /* ignore */ }
+	  NullProtoObject = typeof document != 'undefined'
+	    ? document.domain && activeXDocument
+	      ? NullProtoObjectViaActiveX(activeXDocument) // old IE
+	      : NullProtoObjectViaIFrame()
+	    : NullProtoObjectViaActiveX(activeXDocument); // WSH
+	  var length = enumBugKeys.length;
+	  while (length--) delete NullProtoObject[PROTOTYPE][enumBugKeys[length]];
+	  return NullProtoObject();
+	};
+
+	hiddenKeys[IE_PROTO$1] = true;
+
+	// `Object.create` method
+	// https://tc39.es/ecma262/#sec-object.create
+	var objectCreate = Object.create || function create(O, Properties) {
+	  var result;
+	  if (O !== null) {
+	    EmptyConstructor[PROTOTYPE] = anObject$7(O);
+	    result = new EmptyConstructor();
+	    EmptyConstructor[PROTOTYPE] = null;
+	    // add "__proto__" for Object.getPrototypeOf polyfill
+	    result[IE_PROTO$1] = O;
+	  } else result = NullProtoObject();
+	  return Properties === undefined ? result : defineProperties(result, Properties);
+	};
+
+	var fails$2 = fails$8;
+
+	var correctPrototypeGetter = !fails$2(function () {
+	  function F() { /* empty */ }
+	  F.prototype.constructor = null;
+	  // eslint-disable-next-line es/no-object-getprototypeof -- required for testing
+	  return Object.getPrototypeOf(new F()) !== F.prototype;
+	});
+
+	var hasOwn$1 = hasOwnProperty_1;
+	var isCallable$3 = isCallable$d;
+	var toObject = toObject$2;
+	var sharedKey = sharedKey$3;
+	var CORRECT_PROTOTYPE_GETTER = correctPrototypeGetter;
+
+	var IE_PROTO = sharedKey('IE_PROTO');
+	var ObjectPrototype = Object.prototype;
+
+	// `Object.getPrototypeOf` method
+	// https://tc39.es/ecma262/#sec-object.getprototypeof
+	// eslint-disable-next-line es/no-object-getprototypeof -- safe
+	var objectGetPrototypeOf = CORRECT_PROTOTYPE_GETTER ? Object.getPrototypeOf : function (O) {
+	  var object = toObject(O);
+	  if (hasOwn$1(object, IE_PROTO)) return object[IE_PROTO];
+	  var constructor = object.constructor;
+	  if (isCallable$3(constructor) && object instanceof constructor) {
+	    return constructor.prototype;
+	  } return object instanceof Object ? ObjectPrototype : null;
+	};
+
+	var fails$1 = fails$8;
+	var isCallable$2 = isCallable$d;
+	var getPrototypeOf = objectGetPrototypeOf;
+	var redefine$1 = redefine$3.exports;
+	var wellKnownSymbol$6 = wellKnownSymbol$8;
+
+	var ITERATOR$2 = wellKnownSymbol$6('iterator');
+	var BUGGY_SAFARI_ITERATORS = false;
+
+	// `%IteratorPrototype%` object
+	// https://tc39.es/ecma262/#sec-%iteratorprototype%-object
+	var IteratorPrototype$2, PrototypeOfArrayIteratorPrototype, arrayIterator;
+
+	/* eslint-disable es/no-array-prototype-keys -- safe */
+	if ([].keys) {
+	  arrayIterator = [].keys();
+	  // Safari 8 has buggy iterators w/o `next`
+	  if (!('next' in arrayIterator)) BUGGY_SAFARI_ITERATORS = true;
+	  else {
+	    PrototypeOfArrayIteratorPrototype = getPrototypeOf(getPrototypeOf(arrayIterator));
+	    if (PrototypeOfArrayIteratorPrototype !== Object.prototype) IteratorPrototype$2 = PrototypeOfArrayIteratorPrototype;
+	  }
+	}
+
+	var NEW_ITERATOR_PROTOTYPE = IteratorPrototype$2 == undefined || fails$1(function () {
+	  var test = {};
+	  // FF44- legacy iterators case
+	  return IteratorPrototype$2[ITERATOR$2].call(test) !== test;
+	});
+
+	if (NEW_ITERATOR_PROTOTYPE) IteratorPrototype$2 = {};
+
+	// `%IteratorPrototype%[@@iterator]()` method
+	// https://tc39.es/ecma262/#sec-%iteratorprototype%-@@iterator
+	if (!isCallable$2(IteratorPrototype$2[ITERATOR$2])) {
+	  redefine$1(IteratorPrototype$2, ITERATOR$2, function () {
+	    return this;
+	  });
+	}
+
+	var iteratorsCore = {
+	  IteratorPrototype: IteratorPrototype$2,
+	  BUGGY_SAFARI_ITERATORS: BUGGY_SAFARI_ITERATORS
+	};
+
+	// https://github.com/tc39/proposal-iterator-helpers
+	var $$2 = _export;
+	var global$1 = global$c;
+	var anInstance = anInstance$1;
+	var isCallable$1 = isCallable$d;
+	var createNonEnumerableProperty$1 = createNonEnumerableProperty$5;
+	var fails = fails$8;
+	var hasOwn = hasOwnProperty_1;
+	var wellKnownSymbol$5 = wellKnownSymbol$8;
+	var IteratorPrototype$1 = iteratorsCore.IteratorPrototype;
+
+	var TO_STRING_TAG$3 = wellKnownSymbol$5('toStringTag');
+
+	var NativeIterator = global$1.Iterator;
+
+	// FF56- have non-standard global helper `Iterator`
+	var FORCED = !isCallable$1(NativeIterator)
+	  || NativeIterator.prototype !== IteratorPrototype$1
+	  // FF44- non-standard `Iterator` passes previous tests
+	  || !fails(function () { NativeIterator({}); });
+
+	var IteratorConstructor = function Iterator() {
+	  anInstance(this, IteratorConstructor);
+	};
+
+	if (!hasOwn(IteratorPrototype$1, TO_STRING_TAG$3)) {
+	  createNonEnumerableProperty$1(IteratorPrototype$1, TO_STRING_TAG$3, 'Iterator');
+	}
+
+	if (FORCED || !hasOwn(IteratorPrototype$1, 'constructor') || IteratorPrototype$1.constructor === Object) {
+	  createNonEnumerableProperty$1(IteratorPrototype$1, 'constructor', IteratorConstructor);
+	}
+
+	IteratorConstructor.prototype = IteratorPrototype$1;
+
+	$$2({ global: true, forced: FORCED }, {
+	  Iterator: IteratorConstructor
+	});
+
+	var iterators = {};
+
+	var wellKnownSymbol$4 = wellKnownSymbol$8;
+	var Iterators$1 = iterators;
+
+	var ITERATOR$1 = wellKnownSymbol$4('iterator');
+	var ArrayPrototype = Array.prototype;
+
+	// check on default Array iterator
+	var isArrayIteratorMethod$1 = function (it) {
+	  return it !== undefined && (Iterators$1.Array === it || ArrayPrototype[ITERATOR$1] === it);
+	};
+
+	var aCallable$3 = aCallable$5;
+
+	// optional / simple context binding
+	var functionBindContext = function (fn, that, length) {
+	  aCallable$3(fn);
+	  if (that === undefined) return fn;
+	  switch (length) {
+	    case 0: return function () {
+	      return fn.call(that);
+	    };
+	    case 1: return function (a) {
+	      return fn.call(that, a);
+	    };
+	    case 2: return function (a, b) {
+	      return fn.call(that, a, b);
+	    };
+	    case 3: return function (a, b, c) {
+	      return fn.call(that, a, b, c);
+	    };
+	  }
+	  return function (/* ...args */) {
+	    return fn.apply(that, arguments);
+	  };
+	};
+
+	var wellKnownSymbol$3 = wellKnownSymbol$8;
+
+	var TO_STRING_TAG$2 = wellKnownSymbol$3('toStringTag');
+	var test = {};
+
+	test[TO_STRING_TAG$2] = 'z';
+
+	var toStringTagSupport = String(test) === '[object z]';
+
+	var TO_STRING_TAG_SUPPORT = toStringTagSupport;
+	var isCallable = isCallable$d;
+	var classofRaw = classofRaw$1;
+	var wellKnownSymbol$2 = wellKnownSymbol$8;
+
+	var TO_STRING_TAG$1 = wellKnownSymbol$2('toStringTag');
+	// ES3 wrong here
+	var CORRECT_ARGUMENTS = classofRaw(function () { return arguments; }()) == 'Arguments';
+
+	// fallback for IE11 Script Access Denied error
+	var tryGet = function (it, key) {
+	  try {
+	    return it[key];
+	  } catch (error) { /* empty */ }
+	};
+
+	// getting tag from ES6+ `Object.prototype.toString`
+	var classof$1 = TO_STRING_TAG_SUPPORT ? classofRaw : function (it) {
+	  var O, tag, result;
+	  return it === undefined ? 'Undefined' : it === null ? 'Null'
+	    // @@toStringTag case
+	    : typeof (tag = tryGet(O = Object(it), TO_STRING_TAG$1)) == 'string' ? tag
+	    // builtinTag case
+	    : CORRECT_ARGUMENTS ? classofRaw(O)
+	    // ES3 arguments fallback
+	    : (result = classofRaw(O)) == 'Object' && isCallable(O.callee) ? 'Arguments' : result;
+	};
+
+	var classof = classof$1;
+	var getMethod$2 = getMethod$4;
+	var Iterators = iterators;
+	var wellKnownSymbol$1 = wellKnownSymbol$8;
+
+	var ITERATOR = wellKnownSymbol$1('iterator');
+
+	var getIteratorMethod$2 = function (it) {
+	  if (it != undefined) return getMethod$2(it, ITERATOR)
+	    || getMethod$2(it, '@@iterator')
+	    || Iterators[classof(it)];
+	};
+
+	var aCallable$2 = aCallable$5;
+	var anObject$6 = anObject$b;
+	var getIteratorMethod$1 = getIteratorMethod$2;
+
+	var getIterator$1 = function (argument, usingIterator) {
+	  var iteratorMethod = arguments.length < 2 ? getIteratorMethod$1(argument) : usingIterator;
+	  if (aCallable$2(iteratorMethod)) return anObject$6(iteratorMethod.call(argument));
+	  throw TypeError(String(argument) + ' is not iterable');
+	};
+
+	var anObject$5 = anObject$b;
+	var getMethod$1 = getMethod$4;
+
+	var iteratorClose$2 = function (iterator, kind, value) {
+	  var innerResult, innerError;
+	  anObject$5(iterator);
+	  try {
+	    innerResult = getMethod$1(iterator, 'return');
+	    if (!innerResult) {
+	      if (kind === 'throw') throw value;
+	      return value;
+	    }
+	    innerResult = innerResult.call(iterator);
+	  } catch (error) {
+	    innerError = true;
+	    innerResult = error;
+	  }
+	  if (kind === 'throw') throw value;
+	  if (innerError) throw innerResult;
+	  anObject$5(innerResult);
+	  return value;
+	};
+
+	var anObject$4 = anObject$b;
+	var isArrayIteratorMethod = isArrayIteratorMethod$1;
+	var lengthOfArrayLike = lengthOfArrayLike$2;
+	var bind = functionBindContext;
+	var getIterator = getIterator$1;
+	var getIteratorMethod = getIteratorMethod$2;
+	var iteratorClose$1 = iteratorClose$2;
+
+	var Result = function (stopped, result) {
+	  this.stopped = stopped;
+	  this.result = result;
+	};
+
+	var iterate$1 = function (iterable, unboundFunction, options) {
+	  var that = options && options.that;
+	  var AS_ENTRIES = !!(options && options.AS_ENTRIES);
+	  var IS_ITERATOR = !!(options && options.IS_ITERATOR);
+	  var INTERRUPTED = !!(options && options.INTERRUPTED);
+	  var fn = bind(unboundFunction, that, 1 + AS_ENTRIES + INTERRUPTED);
+	  var iterator, iterFn, index, length, result, next, step;
+
+	  var stop = function (condition) {
+	    if (iterator) iteratorClose$1(iterator, 'normal', condition);
+	    return new Result(true, condition);
+	  };
+
+	  var callFn = function (value) {
+	    if (AS_ENTRIES) {
+	      anObject$4(value);
+	      return INTERRUPTED ? fn(value[0], value[1], stop) : fn(value[0], value[1]);
+	    } return INTERRUPTED ? fn(value, stop) : fn(value);
+	  };
+
+	  if (IS_ITERATOR) {
+	    iterator = iterable;
+	  } else {
+	    iterFn = getIteratorMethod(iterable);
+	    if (!iterFn) throw TypeError(String(iterable) + ' is not iterable');
+	    // optimisation for array iterators
+	    if (isArrayIteratorMethod(iterFn)) {
+	      for (index = 0, length = lengthOfArrayLike(iterable); length > index; index++) {
+	        result = callFn(iterable[index]);
+	        if (result && result instanceof Result) return result;
+	      } return new Result(false);
+	    }
+	    iterator = getIterator(iterable, iterFn);
+	  }
+
+	  next = iterator.next;
+	  while (!(step = next.call(iterator)).done) {
+	    try {
+	      result = callFn(step.value);
+	    } catch (error) {
+	      iteratorClose$1(iterator, 'throw', error);
+	    }
+	    if (typeof result == 'object' && result && result instanceof Result) return result;
+	  } return new Result(false);
+	};
+
+	// https://github.com/tc39/proposal-iterator-helpers
+	var $$1 = _export;
+	var iterate = iterate$1;
+	var anObject$3 = anObject$b;
+
+	$$1({ target: 'Iterator', proto: true, real: true }, {
+	  forEach: function forEach(fn) {
+	    iterate(anObject$3(this), fn, { IS_ITERATOR: true });
+	  }
+	});
+
+	var redefine = redefine$3.exports;
+
+	var redefineAll$1 = function (target, src, options) {
+	  for (var key in src) redefine(target, key, src[key], options);
+	  return target;
+	};
+
+	var aCallable$1 = aCallable$5;
+	var anObject$2 = anObject$b;
+	var create = objectCreate;
+	var createNonEnumerableProperty = createNonEnumerableProperty$5;
+	var redefineAll = redefineAll$1;
+	var wellKnownSymbol = wellKnownSymbol$8;
+	var InternalStateModule = internalState;
+	var getMethod = getMethod$4;
+	var IteratorPrototype = iteratorsCore.IteratorPrototype;
+
+	var setInternalState = InternalStateModule.set;
+	var getInternalState = InternalStateModule.get;
+
+	var TO_STRING_TAG = wellKnownSymbol('toStringTag');
+
+	var iteratorCreateProxy = function (nextHandler, IS_ITERATOR) {
+	  var IteratorProxy = function Iterator(state) {
+	    state.next = aCallable$1(state.iterator.next);
+	    state.done = false;
+	    state.ignoreArg = !IS_ITERATOR;
+	    setInternalState(this, state);
+	  };
+
+	  IteratorProxy.prototype = redefineAll(create(IteratorPrototype), {
+	    next: function next(arg) {
+	      var state = getInternalState(this);
+	      var args = arguments.length ? [state.ignoreArg ? undefined : arg] : IS_ITERATOR ? [] : [undefined];
+	      state.ignoreArg = false;
+	      var result = state.done ? undefined : nextHandler.call(state, args);
+	      return { done: state.done, value: result };
+	    },
+	    'return': function (value) {
+	      var state = getInternalState(this);
+	      var iterator = state.iterator;
+	      state.done = true;
+	      var $$return = getMethod(iterator, 'return');
+	      return { done: true, value: $$return ? anObject$2($$return.call(iterator, value)).value : value };
+	    },
+	    'throw': function (value) {
+	      var state = getInternalState(this);
+	      var iterator = state.iterator;
+	      state.done = true;
+	      var $$throw = getMethod(iterator, 'throw');
+	      if ($$throw) return $$throw.call(iterator, value);
+	      throw value;
+	    }
+	  });
+
+	  if (!IS_ITERATOR) {
+	    createNonEnumerableProperty(IteratorProxy.prototype, TO_STRING_TAG, 'Generator');
+	  }
+
+	  return IteratorProxy;
+	};
+
+	var anObject$1 = anObject$b;
+	var iteratorClose = iteratorClose$2;
+
+	// call something on iterator step with safe closing on error
+	var callWithSafeIterationClosing$1 = function (iterator, fn, value, ENTRIES) {
+	  try {
+	    return ENTRIES ? fn(anObject$1(value)[0], value[1]) : fn(value);
+	  } catch (error) {
+	    iteratorClose(iterator, 'throw', error);
+	  }
+	};
+
+	// https://github.com/tc39/proposal-iterator-helpers
+	var $ = _export;
+	var aCallable = aCallable$5;
+	var anObject = anObject$b;
+	var createIteratorProxy = iteratorCreateProxy;
+	var callWithSafeIterationClosing = callWithSafeIterationClosing$1;
+
+	var IteratorProxy = createIteratorProxy(function (args) {
+	  var iterator = this.iterator;
+	  var result = anObject(this.next.apply(iterator, args));
+	  var done = this.done = !!result.done;
+	  if (!done) return callWithSafeIterationClosing(iterator, this.mapper, result.value);
+	});
+
+	$({ target: 'Iterator', proto: true, real: true }, {
+	  map: function map(mapper) {
+	    return new IteratorProxy({
+	      iterator: anObject(this),
+	      mapper: aCallable(mapper)
+	    });
+	  }
+	});
+
+	const isZHInGameSetting = localStorage.getItem("i18nextLng")?.toLowerCase()?.startsWith("zh"); // 获取游戏内设置语言
+	let isZH = isZHInGameSetting; // MWITools 本身显示的语言默认由游戏内设置语言决定
+
+	let settingsMap = {
+	  tracker0: {
+	    id: "tracker0",
+	    desc: isZH ? "玩家 #1" : "player #1",
+	    isTrue: true,
+	    r: 255,
+	    g: 99,
+	    b: 132
+	  },
+	  tracker1: {
+	    id: "tracker1",
+	    desc: isZH ? "玩家 #2" : "player #2",
+	    isTrue: true,
+	    r: 54,
+	    g: 162,
+	    b: 235
+	  },
+	  tracker2: {
+	    id: "tracker2",
+	    desc: isZH ? "玩家 #3" : "player #3",
+	    isTrue: true,
+	    r: 255,
+	    g: 206,
+	    b: 86
+	  },
+	  tracker3: {
+	    id: "tracker3",
+	    desc: isZH ? "玩家 #4" : "player #4",
+	    isTrue: true,
+	    r: 75,
+	    g: 192,
+	    b: 192
+	  },
+	  tracker4: {
+	    id: "tracker4",
+	    desc: isZH ? "玩家 #5" : "player #5",
+	    isTrue: true,
+	    r: 153,
+	    g: 102,
+	    b: 255
+	  },
+	  tracker6: {
+	    id: "tracker6",
+	    desc: isZH ? "敌人" : "enemies",
+	    isTrue: true,
+	    r: 255,
+	    g: 0,
+	    b: 0
+	  }
+	};
+	readSettings();
+	function waitForSetttins() {
+	  const targetNode = document.querySelector("div.SettingsPanel_profileTab__214Bj");
+	  if (targetNode) {
+	    if (!targetNode.querySelector("#tracker_settings")) {
+	      targetNode.insertAdjacentHTML("beforeend", `<div id="tracker_settings"></div>`);
+	      const insertElem = targetNode.querySelector("div#tracker_settings");
+	      insertElem.insertAdjacentHTML("beforeend", `<div style="float: left; color: orange">${isZH ? "MWI-Hit-Tracker 设置 ：" : "MWI-Hit-Tracker Settings: "}</div></br>`);
+	      for (const setting of Object.values(settingsMap)) {
+	        insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option"><input type="checkbox" id="${setting.id}" ${setting.isTrue ? "checked" : ""}></input>${setting.desc}<div class="color-preview" id="colorPreview_${setting.id}"></div></div>`);
+	        // 颜色自定义
+	        const colorPreview = document.getElementById('colorPreview_' + setting.id);
+	        let currentColor = {
+	          r: setting.r,
+	          g: setting.g,
+	          b: setting.b
+	        };
+
+	        // 点击打开颜色选择器
+	        colorPreview.addEventListener('click', () => {
+	          const settingColor = {
+	            r: settingsMap[setting.id].r,
+	            g: settingsMap[setting.id].g,
+	            b: settingsMap[setting.id].b
+	          };
+	          const modal = createColorPicker(settingColor, newColor => {
+	            currentColor = newColor;
+	            settingsMap[setting.id].r = newColor.r;
+	            settingsMap[setting.id].g = newColor.g;
+	            settingsMap[setting.id].b = newColor.b;
+	            localStorage.setItem("tracker_settingsMap", JSON.stringify(settingsMap));
+	            updatePreview();
+	          });
+	          document.body.appendChild(modal);
+	        });
+	        function updatePreview() {
+	          colorPreview.style.backgroundColor = `rgb(${currentColor.r},${currentColor.g},${currentColor.b})`;
+	        }
+	        updatePreview();
+	        function createColorPicker(initialColor, callback) {
+	          // 创建弹窗容器
+	          const backdrop = document.createElement('div');
+	          backdrop.className = 'modal-backdrop';
+	          const modal = document.createElement('div');
+	          modal.className = 'color-picker-modal';
+
+	          // 颜色预览
+	          //const preview = document.createElement('div');
+	          //preview.className = 'color-preview';
+	          //preview.style.height = '100px';
+	          // 创建SVG容器
+	          const preview = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	          preview.setAttribute("width", "200");
+	          preview.setAttribute("height", "150");
+	          preview.style.display = 'block';
+	          // 创建抛物线路径
+	          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+	          Object.assign(path.style, {
+	            strokeWidth: '5px',
+	            fill: 'none',
+	            strokeLinecap: 'round'
+	          });
+	          path.setAttribute("d", "M 0 130 Q 100 0 200 130");
+	          preview.appendChild(path);
+
+	          // 颜色控制组件
+	          const controls = document.createElement('div');
+	          ['r', 'g', 'b'].forEach(channel => {
+	            const container = document.createElement('div');
+	            container.className = 'slider-container';
+
+	            // 标签
+	            const label = document.createElement('label');
+	            label.textContent = channel.toUpperCase() + ':';
+	            label.style.color = "white";
+
+	            // 滑块
+	            const slider = document.createElement('input');
+	            slider.type = 'range';
+	            slider.min = 0;
+	            slider.max = 255;
+	            slider.value = initialColor[channel];
+
+	            // 输入框
+	            const input = document.createElement('input');
+	            input.type = 'number';
+	            input.min = 0;
+	            input.max = 255;
+	            input.value = initialColor[channel];
+	            input.style.width = '60px';
+
+	            // 双向绑定
+	            const updateChannel = value => {
+	              value = Math.min(255, Math.max(0, parseInt(value) || 0));
+	              slider.value = value;
+	              input.value = value;
+	              currentColor[channel] = value;
+	              path.style.stroke = getColorString(currentColor);
+	            };
+	            slider.addEventListener('input', e => updateChannel(e.target.value));
+	            input.addEventListener('change', e => updateChannel(e.target.value));
+	            container.append(label, slider, input);
+	            controls.append(container);
+	          });
+
+	          // 操作按钮
+	          const actions = document.createElement('div');
+	          actions.className = 'modal-actions';
+	          const confirmBtn = document.createElement('button');
+	          confirmBtn.textContent = isZH ? '确定' : 'OK';
+	          confirmBtn.onclick = () => {
+	            callback(currentColor);
+	            backdrop.remove();
+	          };
+	          const cancelBtn = document.createElement('button');
+	          cancelBtn.textContent = isZH ? '取消' : 'Cancel';
+	          cancelBtn.onclick = () => backdrop.remove();
+	          actions.append(cancelBtn, confirmBtn);
+
+	          // 组装弹窗
+	          const getColorString = color => `rgb(${color.r},${color.g},${color.b})`;
+	          path.style.stroke = getColorString(settingsMap[setting.id]);
+	          modal.append(preview, controls, actions);
+	          backdrop.append(modal);
+
+	          // 点击背景关闭
+	          backdrop.addEventListener('click', e => {
+	            if (e.target === backdrop) backdrop.remove();
+	          });
+	          return backdrop;
+	        }
+	      }
+	      insertElem.addEventListener("change", saveSettings);
+	    }
+	  }
+	  setTimeout(waitForSetttins, 500);
+	}
+	function saveSettings() {
+	  for (const checkbox of document.querySelectorAll("div#tracker_settings input")) {
+	    settingsMap[checkbox.id].isTrue = checkbox.checked;
+	    localStorage.setItem("tracker_settingsMap", JSON.stringify(settingsMap));
+	  }
+	}
+	function readSettings() {
+	  const ls = localStorage.getItem("tracker_settingsMap");
+	  if (ls) {
+	    const lsObj = JSON.parse(ls);
+	    for (const option of Object.values(lsObj)) {
+	      if (settingsMap.hasOwnProperty(option.id)) {
+	        settingsMap[option.id].isTrue = option.isTrue;
+	        settingsMap[option.id].r = option.r;
+	        settingsMap[option.id].g = option.g;
+	        settingsMap[option.id].b = option.b;
+	      }
+	    }
+	  }
+	}
+	const style = document.createElement('style');
+	style.textContent = `
+    .tracker-option {
+      display: flex;
+      align-items: center;
+    }
+
+    .color-preview {
+        cursor: pointer;
+        width: 20px;
+        height: 20px;
+        margin: 3px 3px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+    }
+
+    .color-picker-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.5);
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        z-index: 1000;
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+    }
+
+    .modal-actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+`;
+	document.head.appendChild(style);
+
+	const canvas = initTrackerCanvas();
+	const ctx = canvas.getContext('2d');
+	function initTrackerCanvas() {
+	  const gamePanel = document.querySelector("body");
+	  const canvas = document.createElement('canvas');
+	  canvas.id = 'hitTrackerCanvas';
+	  canvas.style.position = 'fixed';
+	  canvas.style.top = '0';
+	  canvas.style.left = '0';
+	  canvas.style.pointerEvents = 'none';
+	  canvas.style.zIndex = '200';
+	  canvas.style.width = '100%';
+	  canvas.style.height = '100%';
+	  canvas.width = window.innerWidth;
+	  canvas.height = window.innerHeight;
+	  canvas.pointerEvents = 'none';
+	  gamePanel.appendChild(canvas);
+	  window.addEventListener('resize', () => {
+	    // canvas.width = battlePanel.offsetWidth;
+	    // canvas.height = battlePanel.offsetHeight;
+	    canvas.width = window.innerWidth;
+	    canvas.height = window.innerHeight;
+	  });
+	  return canvas;
+	}
+
+	// 更新和渲染所有爆炸
+	function updateExplosions() {
+	  // 遍历所有活跃的爆炸
+	  for (let i = activeExplosions.length - 1; i >= 0; i--) {
+	    const explosion = activeExplosions[i];
+	    explosion.count++;
+	    if (explosion.count >= explosion.maxCount) {
+	      // 爆炸结束，从列表中移除
+	      activeExplosions.splice(i, 1);
+	      continue;
+	    }
+	    ctx.save();
+
+	    // 更新和绘制冲击波
+	    explosion.shockwaves.forEach((wave, index) => {
+	      wave.radius += (wave.maxRadius - wave.radius) * 0.1;
+	      wave.life -= 10;
+	      if (wave.life > 0) {
+	        const alpha = wave.life / 400;
+	        ctx.beginPath();
+	        ctx.strokeStyle = wave.color;
+	        ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+	        // ctx.strokeStyle = `${wave.color.slice(0, -2)}${alpha})`;
+	        ctx.lineWidth = 5 * alpha;
+	        ctx.stroke();
+	      }
+	    });
+
+	    // 更新和绘制主要爆炸粒子
+	    explosion.particles.forEach((p, index) => {
+	      p.speed *= 0.96; // 速度衰减
+	      p.x += Math.cos(p.angle) * p.speed;
+	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
+	      p.life -= 5;
+	      if (p.life > 0) {
+	        const alpha = p.life / 300;
+	        ctx.beginPath();
+	        ctx.arc(p.x, p.y, p.size * (p.life / 300), 0, Math.PI * 2);
+	        ctx.fillStyle = `${p.color.slice(0, -4)}%, ${alpha})`;
+	        ctx.fill();
+	      }
+	    });
+
+	    // 更新和绘制余烬
+	    explosion.embers.forEach((e, index) => {
+	      e.speed *= 0.99; // 慢慢减速
+	      e.x += Math.cos(e.angle) * e.speed;
+	      e.y += Math.sin(e.angle) * e.speed + e.gravity;
+	      e.life -= 3;
+	      if (e.life > 0) {
+	        const alpha = e.life / 800;
+	        ctx.beginPath();
+	        ctx.arc(e.x, e.y, e.size * (e.life / 800), 0, Math.PI * 2);
+	        ctx.fillStyle = `${e.color.slice(0, -4)}%, ${alpha})`;
+	        ctx.fill();
+
+	        // 余烬偶尔产生的小火花
+	        if (Math.random() < 0.03) {
+	          ctx.beginPath();
+	          ctx.arc(e.x, e.y, e.size * 1.5, 0, Math.PI * 2);
+	          ctx.fillStyle = `hsla(30, 100%, 70%, ${alpha * 0.7})`;
+	          ctx.fill();
+	        }
+	      }
+	    });
+
+	    // 更新和绘制烟雾
+	    explosion.smokeParticles.forEach((s, index) => {
+	      s.x += Math.cos(s.angle) * s.speed;
+	      s.y += Math.sin(s.angle) * s.speed + s.gravity;
+	      s.life -= 2;
+	      s.alpha = Math.max(0, s.alpha - 0.003);
+	      if (s.life > 0) {
+	        ctx.beginPath();
+	        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+	        ctx.fillStyle = `rgba(80, 80, 80, ${s.alpha * (s.life / 1200)})`;
+	        ctx.fill();
+	      }
+	    });
+
+	    // 伤害文本
+	    if (explosion.otherInfo.damage) {
+	      const fontSize = Math.min(Math.max(12, Math.pow(explosion.otherInfo.damage, 0.7) / 2), 80);
+	      const damageText = `${explosion.otherInfo.damage}`;
+	      ctx.font = `${fontSize}px Arial`;
+	      ctx.textAlign = 'center';
+	      ctx.textBaseline = 'middle';
+	      // border
+	      ctx.strokeStyle = explosion.otherInfo.color;
+	      ctx.lineWidth = 6;
+	      ctx.strokeText(damageText, explosion.otherInfo.end.x, explosion.otherInfo.end.y - 20);
+	      // main
+	      ctx.fillStyle = 'white';
+	      const textWidth = ctx.measureText(damageText).width;
+	      if (textWidth < 100) {
+	        ctx.fillText(damageText, explosion.otherInfo.end.x, explosion.otherInfo.end.y - 20);
+	      } else {
+	        ctx.fillText(damageText, explosion.otherInfo.end.x, explosion.otherInfo.end.y - 20, textWidth + 10);
+	      }
+	    }
+	    ctx.restore();
+	  }
+	}
+
+	// 动画循环
+	function animate() {
+	  // 完全清空画布
+	  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+	  // 如果需要残影效果，可以绘制半透明矩形
+	  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+	  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+	  // 更新并绘制所有弹丸
+	  for (let i = projectiles.length - 1; i >= 0; i--) {
+	    const proj = projectiles[i];
+	    proj.update();
+	    proj.draw(ctx);
+	    if (proj.isArrived()) {
+	      createExplosion(proj.x, proj.y, proj.color, proj.size, proj.otherInfo); // 将弹丸大小传递给爆炸效果
+	      projectiles.splice(i, 1);
+	    } else if (proj.isOutOfBounds()) {
+	      // 超出边界则移除弹丸，不产生爆炸效果
+	      projectiles.splice(i, 1);
+	    }
+	  }
+
+	  // 更新和渲染所有爆炸效果
+	  updateExplosions();
+	  requestAnimationFrame(animate);
+	}
+	class Projectile {
+	  constructor(startX, startY, endX, endY, color, initialSpeed = 1, size = 10, otherInfo = {}) {
+	    // 基础属性
+	    this.x = startX;
+	    this.y = startY;
+	    this.start = {
+	      x: startX,
+	      y: startY
+	    };
+	    this.target = {
+	      x: endX,
+	      y: endY
+	    };
+	    this.otherInfo = otherInfo;
+
+	    // 运动参数 - 向斜上方抛物线轨迹
+	    this.gravity = 0.2; // 重力加速度
+	    this.initialSpeed = initialSpeed; // 初始速度参数
+
+	    // 计算水平距离和高度差
+	    const dx = endX - startX;
+	    const dy = endY - startY;
+
+	    // 重新设计飞行时间计算，确保合理
+	    // const timeInAir = distance / this.initialSpeed / 10;
+	    const timeInAir = 80 / this.initialSpeed;
+
+	    // 计算初始速度，修正公式确保能够到达目标
+	    this.velocity = {
+	      x: dx / timeInAir,
+	      y: dy / timeInAir - this.gravity * timeInAir / 2
+	    };
+
+	    // 大小参数 (范围1-100)
+	    this.sizeScale = Math.max(1, Math.min(100, size)) / 10; // 转换为比例因子
+
+	    // 外观属性
+	    this.size = 10 * this.sizeScale;
+	    this.color = color;
+
+	    // 拖尾效果
+	    this.trail = [];
+	    this.maxTrailLength = Math.floor(50 * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
+	  }
+	  update() {
+	    // 更新速度 (考虑重力)
+	    this.velocity.y += this.gravity;
+
+	    // 更新位置
+	    this.x += this.velocity.x;
+	    this.y += this.velocity.y;
+
+	    // 更新拖尾
+	    this.trail.push({
+	      x: this.x,
+	      y: this.y
+	    });
+	    if (this.trail.length > this.maxTrailLength) {
+	      this.trail.shift();
+	    }
+	  }
+	  draw(canvas) {
+	    // 绘制拖尾
+	    this.trail.forEach((pos, index) => {
+	      const alpha = index / this.trail.length;
+	      canvas.beginPath();
+	      canvas.arc(pos.x, pos.y, this.size * alpha, 0, Math.PI * 2);
+	      canvas.fillStyle = `${this.color}`;
+	      canvas.fill();
+	    });
+
+	    // 绘制主体
+	    canvas.beginPath();
+	    canvas.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+	    canvas.fillStyle = this.color;
+	    canvas.fill();
+
+	    // 添加光晕效果
+	    const gradient = canvas.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 2);
+	    gradient.addColorStop(0, `${this.color}`);
+	    gradient.addColorStop(1, `${this.color}`);
+	    canvas.fillStyle = gradient;
+	  }
+	  isArrived() {
+	    // 判断是否到达目标点 (调整判定距离)
+	    const arrivalDistance = 20;
+	    return Math.hypot(this.x - this.target.x, this.y - this.target.y) < arrivalDistance;
+	  }
+	  isOutOfBounds() {
+	    return this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height;
+	  }
+	}
+
+	// 项目管理
+	let projectiles = [];
+
+	// 存储所有活跃的爆炸效果
+	let activeExplosions = [];
+
+	// 爆炸效果函数
+	function createExplosion(x, y, color, size = 10, otherInfo = {}) {
+	  // 计算爆炸大小比例
+	  const sizeScale = Math.max(1, Math.min(100, size)) / 20;
+
+	  // 多种粒子系统
+	  const particles = [];
+	  const shockwaves = [];
+	  const embers = [];
+	  const smokeParticles = [];
+
+	  // 主爆炸粒子 - 数量和大小基于sizeScale
+	  const particleCount = Math.floor(4 * sizeScale);
+	  for (let i = 0; i < particleCount; i++) {
+	    particles.push({
+	      x,
+	      y,
+	      angle: Math.random() * Math.PI * 2,
+	      speed: (Math.random() * 7 + 3) * Math.sqrt(sizeScale),
+	      size: (Math.random() * 12 + 8) * sizeScale,
+	      life: 500 * sizeScale,
+	      // 生命时间随大小增加
+	      // color: `hsl(${Math.floor(Math.random()*60 + 10)}, 100%, 60%)`,
+	      color: color,
+	      gravity: 0.3 + Math.random() * 0.1
+	    });
+	  }
+
+	  // 冲击波效果 - 大小基于sizeScale
+	  for (let i = 0; i < Math.ceil(sizeScale); i++) {
+	    shockwaves.push({
+	      x,
+	      y,
+	      radius: 7 * sizeScale,
+	      maxRadius: (100 + Math.random() * 100) * sizeScale,
+	      life: 800 * Math.sqrt(sizeScale),
+	      // color: `hsla(${Math.floor(Math.random()*30 + 15)}, 100%, 50%, 0.8)`,
+	      color: color
+	    });
+	  }
+
+	  // 余烬效果 - 数量和大小基于sizeScale
+	  const emberCount = Math.floor(20 * sizeScale);
+	  for (let i = 0; i < emberCount; i++) {
+	    embers.push({
+	      x,
+	      y,
+	      angle: Math.random() * Math.PI * 2,
+	      speed: (Math.random() * 2 + 0.5) * Math.sqrt(sizeScale),
+	      size: (Math.random() * 6 + 2) * sizeScale,
+	      life: 1200 * Math.sqrt(sizeScale),
+	      // color: `hsl(${Math.floor(Math.random()*30 + 10)}, 100%, ${Math.floor(Math.random()*50 + 40)}%)`,
+	      color: color,
+	      gravity: 0.3
+	    });
+	  }
+
+	  // 烟雾效果 - 数量和大小基于sizeScale
+	  const smokeCount = Math.floor(4 * sizeScale);
+	  for (let i = 0; i < smokeCount; i++) {
+	    smokeParticles.push({
+	      x,
+	      y,
+	      angle: Math.random() * Math.PI * 2,
+	      speed: (Math.random() * 1 + 0.2) * Math.sqrt(sizeScale),
+	      size: (Math.random() * 15 + 8) * sizeScale,
+	      life: 2000 * Math.sqrt(sizeScale),
+	      alpha: 0.7,
+	      gravity: -1 * Math.sqrt(sizeScale) // 烟雾上升速度基于大小
+	    });
+	  }
+
+	  // 闪光效果
+	  function drawFlash() {
+	    const flashRadius = 150 * sizeScale;
+	    const gradient = ctx.createRadialGradient(x, y, 0, x, y, flashRadius);
+	    gradient.addColorStop(0, 'rgba(255, 255, 200, 0.8)');
+	    gradient.addColorStop(0.1, 'rgba(255, 230, 150, 0.6)');
+	    gradient.addColorStop(0.4, 'rgba(255, 100, 50, 0.2)');
+	    gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+	    ctx.fillStyle = gradient;
+	    ctx.fillRect(x - flashRadius, y - flashRadius, flashRadius * 2, flashRadius * 2);
+	  }
+
+	  // 存储爆炸的活跃状态，用于跟踪
+	  const explosionData = {
+	    particles: [...particles],
+	    shockwaves: [...shockwaves],
+	    embers: [...embers],
+	    smokeParticles: [...smokeParticles],
+	    active: true,
+	    count: 0,
+	    maxCount: 120,
+	    otherInfo: otherInfo
+	  };
+
+	  // 将这个爆炸添加到全局爆炸列表中
+	  activeExplosions.push(explosionData);
+
+	  // 初始闪光
+	  drawFlash();
+	}
+	function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200) {
+	  const combatUnitContainer = endElement.querySelector(".CombatUnit_splatsContainer__2xcc0");
+	  combatUnitContainer.style.visibility = "hidden";
+	  const padding = 30;
+	  const randomRange = {
+	    x: Math.floor(Math.random() * (combatUnitContainer.offsetWidth - 2 * padding) - combatUnitContainer.offsetWidth / 2 + padding),
+	    y: Math.floor(Math.random() * (combatUnitContainer.offsetHeight - 2 * padding) - combatUnitContainer.offsetHeight / 2 + padding)
+	  };
+	  const projectileLimit = 30;
+	  const start = getElementCenter(startElement);
+	  const end = getElementCenter(endElement);
+	  end.x = Math.floor(end.x + randomRange.x);
+	  end.y = Math.floor(end.y + randomRange.y);
+	  const size = Math.min(Math.max(Math.pow(damage + 200, 0.8) / 20, 4), 17);
+	  const otherInfo = {
+	    start: start,
+	    end: end,
+	    damage: damage,
+	    color: color
+	  };
+	  const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
+	  projectiles.push(projectile);
+	  if (projectiles.length > projectileLimit) {
+	    projectiles.shift();
+	  }
+	}
+	function getElementCenter(element) {
+	  const rect = element.getBoundingClientRect();
+	  if (element.innerText.trim() === '') {
+	    return {
+	      x: rect.left + rect.width / 2,
+	      y: rect.top
+	    };
+	  }
+	  return {
+	    x: rect.left + rect.width / 2,
+	    y: rect.top + rect.height / 2
+	  };
+	}
+
+	// #region Setting
+	/* 脚本设置面板 */
+	waitForSetttins();
+	let monstersHP = [];
+	let monstersMP = [];
+	let playersHP = [];
+	let playersMP = [];
+	hookWS();
+
+	// #region Hook WS
+	function hookWS() {
+	  const dataProperty = Object.getOwnPropertyDescriptor(MessageEvent.prototype, "data");
+	  const oriGet = dataProperty.get;
+	  dataProperty.get = hookedGet;
+	  Object.defineProperty(MessageEvent.prototype, "data", dataProperty);
+	  function hookedGet() {
+	    const socket = this.currentTarget;
+	    if (!(socket instanceof WebSocket)) {
+	      return oriGet.call(this);
+	    }
+	    if (socket.url.indexOf("api.milkywayidle.com/ws") <= -1 && socket.url.indexOf("api-test.milkywayidle.com/ws") <= -1) {
+	      return oriGet.call(this);
+	    }
+	    const message = oriGet.call(this);
+	    Object.defineProperty(this, "data", {
+	      value: message
+	    }); // Anti-loop
+
+	    return handleMessage(message);
+	  }
+	}
+	function handleMessage(message) {
+	  let obj = JSON.parse(message);
+	  if (obj && obj.type === "new_battle") {
+	    monstersHP = obj.monsters.map(monster => monster.currentHitpoints);
+	    monstersMP = obj.monsters.map(monster => monster.currentManapoints);
+	    playersHP = obj.players.map(player => player.currentHitpoints);
+	    playersMP = obj.players.map(player => player.currentManapoints);
+	  } else if (obj && obj.type === "battle_updated" && monstersHP.length) {
+	    const mMap = obj.mMap;
+	    const pMap = obj.pMap;
+	    const monsterIndices = Object.keys(obj.mMap);
+	    const playerIndices = Object.keys(obj.pMap);
+	    let castMonster = -1;
+	    monsterIndices.forEach(monsterIndex => {
+	      if (mMap[monsterIndex].cMP < monstersMP[monsterIndex]) {
+	        castMonster = monsterIndex;
+	      }
+	      monstersMP[monsterIndex] = mMap[monsterIndex].cMP;
+	    });
+	    let castPlayer = -1;
+	    playerIndices.forEach(userIndex => {
+	      if (pMap[userIndex].cMP < playersMP[userIndex]) {
+	        castPlayer = userIndex;
+	      }
+	      playersMP[userIndex] = pMap[userIndex].cMP;
+	    });
+	    monstersHP.forEach((mHP, mIndex) => {
+	      const monster = mMap[mIndex];
+	      if (monster) {
+	        const hpDiff = mHP - monster.cHP;
+	        monstersHP[mIndex] = monster.cHP;
+	        if (hpDiff > 0 && playerIndices.length > 0) {
+	          if (playerIndices.length > 1) {
+	            playerIndices.forEach(userIndex => {
+	              if (userIndex === castPlayer) {
+	                createLine(userIndex, mIndex, hpDiff);
+	              }
+	            });
+	          } else {
+	            createLine(playerIndices[0], mIndex, hpDiff);
+	          }
+	        }
+	      }
+	    });
+	    playersHP.forEach((pHP, pIndex) => {
+	      const player = pMap[pIndex];
+	      if (player) {
+	        const hpDiff = pHP - player.cHP;
+	        playersHP[pIndex] = player.cHP;
+	        if (hpDiff > 0 && monsterIndices.length > 0) {
+	          if (monsterIndices.length > 1) {
+	            monsterIndices.forEach(monsterIndex => {
+	              if (monsterIndex === castMonster) {
+	                createLine(pIndex, monsterIndex, hpDiff, true);
+	              }
+	            });
+	          } else {
+	            createLine(pIndex, monsterIndices[0], hpDiff, true);
+	          }
+	        }
+	      }
+	    });
+	  }
+	  return message;
+	}
+
+	// #region Main Logic
+
+	// 动画效果
+	function createLine(from, to, hpDiff, reversed = false) {
+	  if (reversed) {
+	    if (!settingsMap.tracker6.isTrue) {
+	      return null;
+	    }
+	  } else {
+	    if (!settingsMap["tracker" + from].isTrue) {
+	      return null;
+	    }
+	  }
+	  const container = document.querySelector(".BattlePanel_playersArea__vvwlB");
+	  if (container && container.children.length > 0) {
+	    const playersContainer = container.children[0];
+	    const effectFrom = playersContainer.children[from];
+	    const monsterContainer = document.querySelector(".BattlePanel_monstersArea__2dzrY").children[0];
+	    const effectTo = monsterContainer.children[to];
+	    const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker" + from];
+	    const lineColor = "rgba(" + trackerSetting.r + ", " + trackerSetting.g + ", " + trackerSetting.b + ", 1)";
+	    createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff);
+	  }
+	}
+
+	// 启动动画
+	animate();
+
+})();
