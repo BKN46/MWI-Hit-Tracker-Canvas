@@ -4,6 +4,7 @@ projectEffect = {
     trailLength: 50,        // 尾迹长度
     gravity: 0.2,           // 重力
     shake: true,            // 是否震动
+    color: rgba(0, 0, 0, 0),    // 强制颜色
     onHit: {                // 碰撞时的粒子效果
         "smoke": 0, 
     },
@@ -20,11 +21,12 @@ export const projectileEffectsMap = {
     'fireball': {
         speedFactor: 1,
         trailLength: 35,
+        shake: true,
         onHit: {
             "smoke": (size) => Math.min(Math.ceil(size * 4), 8),
-            "ember": (size) => Math.min(Math.ceil(size * 10), 8),
+            "ember": (size) => Math.min(Math.ceil(size * 10), 40),
             "shockwave": (size) => Math.min(Math.ceil(size), 4),
-            "smallParticle": (size) => Math.min(Math.ceil(size * 4), 3),
+            "smallParticle": (size) => Math.min(Math.ceil(size * 4), 10),
         },
         draw: (ctx, p) => {
             ctx.beginPath();
@@ -41,5 +43,41 @@ export const projectileEffectsMap = {
             gradient.addColorStop(1, `${p.color}`);
             ctx.fillStyle = gradient;
         }
+    },
+    'heal': {
+        trailLength: 60,
+        shake: false,
+        onHit: {
+            "holyCross": (size) => Math.min(Math.ceil(size * 12), 10),
+        },
+        draw: (ctx, p) => {
+            // draw a star
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        }
+    },
+    'selfHeal': {
+        speedFactor: 10,
+        trailLength: 0,
+        gravity: 0,
+        shake: false,
+        color: 'rgba(0, 255, 0, 0.5)',
+        onHit: {
+            "holyCross": (size) => Math.min(Math.ceil(size * 12), 10),
+        },
+        draw: (ctx, p) => {},
+    },
+    'selfManaRegen': {
+        speedFactor: 10,
+        trailLength: 0,
+        gravity: 0,
+        shake: false,
+        color: 'rgba(68, 120, 241, 0.69)',
+        onHit: {
+            "holyCross": (size) => Math.min(Math.ceil(size * 12), 10),
+        },
+        draw: (ctx, p) => {},
     },
 }

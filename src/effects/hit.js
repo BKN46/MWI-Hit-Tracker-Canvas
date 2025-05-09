@@ -89,5 +89,29 @@ export const onHitEffectsMap = {
                 ctx.fill();
             }
         }
+    },
+    "holyCross": {
+        x: (p) => p.x + (Math.random() - 0.5) * 60,
+        y: (p) => p.y + (Math.random() - 0.5) * 10,
+        size: (p) => (8 * Math.random() + 12) * p.size,
+        life: (p) => 1200 * Math.sqrt(p.size),
+        speed: (p) => 0,
+        gravity: (p) => -0.008 * Math.random() - 0.008,
+        draw: (ctx, p) => {
+            p.speed += p.gravity;
+            p.y += p.speed;
+            p.life -= 3;
+
+            if (p.life > 0) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size / 2, -p.size * 2, p.size, p.size * 4);
+                ctx.fillRect(-p.size * 2, -p.size / 2, p.size * 4, p.size);
+
+                ctx.restore();
+            }
+        }
     }
 }

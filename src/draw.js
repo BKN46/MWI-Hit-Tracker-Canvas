@@ -68,6 +68,41 @@ function applyShakeEffect(element, intensity = 1, duration = 500) {
     }, shakeInterval * (maxShakes + 1)); // Slightly longer than maxShakes * interval time
 }
 
+function addDamageHPBar(element, damage) {
+    const hpBarContainer = element.querySelector(".HitpointsBar_hitpointsBar__2vIqC");
+    const hpBarFront = hpBarContainer.querySelector(".HitpointsBar_currentHp__5exLr");
+    // hpBarFront.style.zIndex = "1";
+    const hpBarValue = hpBarContainer.querySelector(".HitpointsBar_hpValue__xNp7m");
+    // hpBarValue.style.zIndex = "2";
+    const hpStat = hpBarValue.innerHTML.split("/");
+    const currentHp = parseInt(hpStat[0]);
+    const maxHp = parseInt(hpStat[1]);
+
+    // Insert a HpBar behind and set the color to red
+    const hpBarBack = document.createElement("div");
+    hpBarBack.className = "HitpointsBar_currentHp__5exLr HitTracker_hpDrop";
+    hpBarBack.style.background = "var(--color-warning)";
+    hpBarBack.style.position = "absolute";
+    hpBarBack.style.top = "0px";
+    hpBarBack.style.left = "0px";
+    // hpBarBack.style.zIndex = "1"; // Ensure the back bar is below the front bar
+    hpBarBack.style.width = `${hpBarFront.offsetWidth}px`;
+    hpBarBack.style.height = `${hpBarFront.offsetHeight}px`;
+    hpBarBack.style.transformOrigin = "left center";
+    hpBarBack.style.transform = `scaleX(${(currentHp + damage) / maxHp})`;
+    // add animation to drop down
+    hpBarBack.style.transition = "transform 0.5s ease-in-out";
+    hpBarFront.parentNode.insertBefore(hpBarBack, hpBarFront); // Insert the back bar before the front bar
+
+    setTimeout(() => {
+        hpBarBack.style.transform = `scaleX(${currentHp / maxHp})`;
+    }, 100);
+
+    setTimeout(() => {
+        hpBarBack.remove();
+    }, 800);
+}
+
 // 更新和渲染所有命中效果
 function updateOnHits() {
     // 遍历所有活跃的命中
@@ -150,7 +185,7 @@ class Projectile {
         this.type = otherInfo.type || 'default';
         this.effect = projectileEffectsMap[this.type] || projectileEffectsMap['fireball'];
 
-        this.doShake = otherInfo.doShake || this.effect.shake;
+        this.doShake = this.effect.shake;
 
         // 运动参数 - 向斜上方抛物线轨迹
         this.gravity = this.effect.gravity || 0.2; // 重力加速度
@@ -175,7 +210,7 @@ class Projectile {
         
         // 外观属性
         this.size = 10 * this.sizeScale;
-        this.color = color;
+        this.color = this.effect.color || color;
         
         // 拖尾效果
         this.trail = [];
@@ -264,7 +299,8 @@ function createOnHitEffect(projectile) {
         const effectCount = onHitEffect[effectName](projectile.size);
         for (let i = 0; i < effectCount; i++) {
             effects.push({
-                x, y,
+                x: effect.x ? effect.x(projectile) : x, 
+                y: effect.y ? effect.y(projectile) : y,
                 angle: effect.angle ? effect.angle(projectile) : Math.random() * Math.PI * 2,
                 alpha: effect.alpha ? effect.alpha(projectile) : 0.8,
                 size: effect.size ? effect.size(projectile) : Math.random() * 10 + 5,
@@ -314,9 +350,11 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         end: end,
         damage: damage,
         color: color,
-        doShake: damage > 0,
         startElement: startElement,
         endElement: endElement,
+    }
+    if (damage > 0) {
+        addDamageHPBar(endElement, damage);
     }
     const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
     projectiles.push(projectile);
