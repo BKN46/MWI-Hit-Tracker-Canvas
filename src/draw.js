@@ -217,7 +217,6 @@ class Projectile {
         let timeInAir = 80 / this.initialSpeed;
 
         // FPS因子，确保在不同FPS下效果一致
-        console.log(fps);
         const fpsFactor = Math.min(Math.max(fps / 120, 0.8), 12.5); 
         this.gravity *= fpsFactor;
         timeInAir /= fpsFactor;

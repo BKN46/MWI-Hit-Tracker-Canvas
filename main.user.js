@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        0.9.1
+// @version        0.9.2
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -2006,7 +2006,6 @@
 	    let timeInAir = 80 / this.initialSpeed;
 
 	    // FPS因子，确保在不同FPS下效果一致
-	    console.log(fps);
 	    const fpsFactor = Math.min(Math.max(fps / 120, 0.8), 12.5);
 	    this.gravity *= fpsFactor;
 	    timeInAir /= fpsFactor;
