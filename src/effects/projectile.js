@@ -44,6 +44,29 @@ export const projectileEffectsMap = {
             ctx.fillStyle = gradient;
         }
     },
+    'nature': {
+        speedFactor: 1,
+        trailLength: 35,
+        shake: true,
+        onHit: {
+            "leaf": (size) => Math.min(Math.ceil(size * 8), 16),
+        },
+        draw: (ctx, p) => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        },
+        glow: (ctx, p) => {
+            const gradient = ctx.createRadialGradient(
+                p.x, p.y, 0, 
+                p.x, p.y, p.size*2
+            );
+            gradient.addColorStop(0, `${p.color}`);
+            gradient.addColorStop(1, `${p.color}`);
+            ctx.fillStyle = gradient;
+        }
+    },
     'heal': {
         trailLength: 60,
         shake: false,

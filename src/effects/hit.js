@@ -113,5 +113,60 @@ export const onHitEffectsMap = {
                 ctx.restore();
             }
         }
+    },
+    "leaf": {
+        // Made by HwiteCat
+        x: (p) => p.x + (Math.random() - 0.5) * 60,
+        y: (p) => p.y + (Math.random() - 0.5) * 10,
+        angle: (p) => Math.random() * Math.PI * 2,
+        size: (p) => (12 * Math.random() + 8) * p.size,
+        life: (p) => 1000 * p.size,
+        speed: (p) => (Math.random() * 3 + 1) * Math.sqrt(p.size),
+        gravity: (p) => 0.12,
+        draw: (ctx, p) => {
+            if (!p.rotation) p.rotation = Math.random() * Math.PI * 2;
+            if (!p.rotationSpeed) p.rotationSpeed = (Math.random() - 0.5) * 0.02;
+            if (!p.sway) p.sway = (Math.random() - 0.5) * 0.2;
+            if (!p.swaySpeed) p.swaySpeed = (Math.random() - 0.5) * 0.02;
+
+            p.speed *= 0.98;
+            p.x += Math.cos(p.angle) * p.speed;
+            p.y += Math.sin(p.angle) * p.speed + p.gravity;
+            p.life -= 3;
+
+            if (p.rotation !== undefined) {
+                p.rotation += p.rotationSpeed;
+            }
+            if (p.scale !== undefined) {
+                p.scale += p.scaleSpeed;
+                p.scale = Math.max(0.1, p.scale);
+            }
+
+            if (p.sway !== undefined) {
+                p.x += Math.sin(p.y * p.swaySpeed) * p.sway;
+            }
+
+            if (p.life > 0) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.scale(p.scale, 1);
+                ctx.beginPath();
+                ctx.moveTo(0, -p.size);
+                ctx.bezierCurveTo(
+                    p.size/2, -p.size/2,
+                    p.size/2, 0,
+                    0, p.size
+                );
+                ctx.bezierCurveTo(
+                    -p.size/2, 0,
+                    -p.size/2, -p.size/2,
+                    0, -p.size
+                );
+                ctx.fillStyle = p.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
     }
 }
