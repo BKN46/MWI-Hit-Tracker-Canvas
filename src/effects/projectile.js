@@ -30,6 +30,9 @@ export const projectileEffectsMap = {
             "shockwave": (size) => Math.min(Math.ceil(size), 4),
             "smallParticle": (size) => Math.min(Math.ceil(size * 4), 10),
         },
+        onCrit: {
+            "star": (size) => Math.min(Math.ceil(size * 10), 20),
+        },
         draw: (ctx, p) => {
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -202,4 +205,18 @@ export const projectileEffectsMap = {
         },
         draw: (ctx, p) => {},
     },
+    'debug': {
+        speedFactor: 1,
+        trailLength: 35,
+        shake: true,
+        onHit: {
+            "star": (size) => Math.min(Math.ceil(size * 10), 20),
+        },
+        draw: (ctx, p) => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        },
+    }
 }

@@ -424,5 +424,58 @@ export const onHitEffectsMap = {
                 }
             });
         }
+    },
+    "star": {
+        x: p => p.x + (Math.random() - 0.5) * 60,
+        y: p => p.y + (Math.random() - 0.5) * 10,
+        angle: p => Math.random() * Math.PI * 2,
+        size: p => (Math.random() * 6 + 2) * p.size,
+        life: p => 1200 * Math.sqrt(p.size),
+        speed: p => (Math.random() * 6 + 2) * Math.sqrt(p.size),
+        gravity: p => -0.1,
+        draw: (ctx, p) => {
+            if (!p.initialized) {
+                p.initialized = true;
+                p.y -= 5 * p.size;
+            }
+
+            p.speed *= 0.97; // 慢慢减速
+            p.x += Math.cos(p.angle) * p.speed;
+            p.y += Math.sin(p.angle) * p.speed + p.gravity;
+            p.life -= 3;
+
+            if (p.life > 0) {
+                const alpha = Math.max(0, Math.min(1, (p.life / 1200)));
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+
+                const starSize = p.size * 10;
+
+                ctx.beginPath();
+                const startAngle = -Math.PI / 2;
+                const startX = Math.cos(startAngle) * starSize;
+                const startY = Math.sin(startAngle) * starSize;
+                ctx.moveTo(startX, startY);
+
+                for (let i = 0; i < 5; i++) {
+                    const outerAngle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                    const innerAngle = outerAngle + Math.PI / 5;
+
+                    const outerX = Math.cos(outerAngle) * starSize;
+                    const outerY = Math.sin(outerAngle) * starSize;
+                    ctx.lineTo(outerX, outerY);
+
+                    const innerX = Math.cos(innerAngle) * (starSize / 2);
+                    const innerY = Math.sin(innerAngle) * (starSize / 2);
+                    ctx.lineTo(innerX, innerY);
+                }
+                ctx.closePath();
+                ctx.fillStyle = p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
     }
 }

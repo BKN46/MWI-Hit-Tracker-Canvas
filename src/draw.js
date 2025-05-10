@@ -146,12 +146,14 @@ function updateOnHits() {
                 y: effect.otherInfo.end.y - 20,
             }
 
+
             // border
             ctx.strokeStyle = effect.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${fontAlpha})`);
             ctx.lineWidth = 6;
             ctx.strokeText(damageText, textPosition.x, textPosition.y);
             // main
-            ctx.fillStyle = 'white';
+            const fillColor = effect.otherInfo.isCrit ? 'rgba(255, 213, 89, 1)' : 'white';
+            ctx.fillStyle = fillColor;
             ctx.fillText(damageText, textPosition.x, textPosition.y);
         }
         ctx.restore();
@@ -351,7 +353,12 @@ function createOnHitEffect(projectile) {
 
     const effects = [];
 
-    const onHitEffect = projectile.effect.onHit;
+    let onHitEffect = projectile.effect.onHit;
+    if (projectile.otherInfo.isCrit) {
+        const onCrit = projectile.effect.onCrit || projectileEffectsMap.fireball.onCrit;
+        onHitEffect = { ...onHitEffect, ...onCrit };
+    }
+
     for (const effectName in onHitEffect) {
         const effect = onHitEffectsMap[effectName];
         if (!effect) continue;
@@ -393,7 +400,7 @@ function createOnHitEffect(projectile) {
     activeOnHitAnimation.push(onHitEffectData);
 }
 
-export function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200, projectileType = 'default') {
+export function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200, projectileType = 'default', isCrit = false) {
     if (!startElement || !endElement) {
         return;
     }
@@ -423,6 +430,7 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         end: end,
         damage: damage,
         color: color,
+        isCrit: isCrit,
         startElement: startElement,
         endElement: endElement,
     }

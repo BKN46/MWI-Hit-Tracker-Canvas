@@ -57,7 +57,16 @@ function handleMessage(message) {
         let castPlayer = -1;
         playerIndices.forEach((userIndex) => {
             if(pMap[userIndex].cMP < playersMP[userIndex]){castPlayer = userIndex;}
-            if(pMap[userIndex].cMP > playersMP[userIndex]){registProjectile(userIndex, userIndex, pMap[userIndex].cMP-playersMP[userIndex], false, 'selfManaRegen', true);}
+            if(pMap[userIndex].cMP > playersMP[userIndex]){
+                registProjectile({
+                    from: userIndex,
+                    to: userIndex,
+                    hpDiff: pMap[userIndex].cMP-playersMP[userIndex],
+                    reversed: false,
+                    abilityHrid: 'selfManaRegen',
+                    toPlayer: true
+                });
+            }
             playersMP[userIndex] = pMap[userIndex].cMP;
             if(pMap[userIndex].abilityHrid){playersAbility[userIndex] = pMap[userIndex].abilityHrid;}
         });
@@ -68,14 +77,31 @@ function handleMessage(message) {
                 const hpDiff = mHP - monster.cHP;
                 monstersHP[mIndex] = monster.cHP;
                 if (hpDiff > 0 && playerIndices.length > 0) {
+                    const isCrit = monster.dmgCounter == monster.critCounter;
                     if (playerIndices.length > 1) {
                         playerIndices.forEach((userIndex) => {
                             if(userIndex === castPlayer) {
-                                registProjectile(userIndex, mIndex, hpDiff, false, playersAbility[userIndex]);
+                                registProjectile({
+                                    from: userIndex,
+                                    to: mIndex,
+                                    hpDiff: hpDiff,
+                                    reversed: false,
+                                    abilityHrid: playersAbility[userIndex],
+                                    toPlayer: false,
+                                    isCrit: isCrit,
+                                });
                             }
                         });
                     } else {
-                        registProjectile(playerIndices[0], mIndex, hpDiff, false , playersAbility[playerIndices[0]]);
+                        registProjectile({
+                            from: playerIndices[0],
+                            to: mIndex,
+                            hpDiff: hpDiff,
+                            reversed: false,
+                            abilityHrid: playersAbility[playerIndices[0]],
+                            toPlayer: false,
+                            isCrit: isCrit,
+                        });
                     }
                 }
             }
@@ -87,20 +113,51 @@ function handleMessage(message) {
                 const hpDiff = pHP - player.cHP;
                 playersHP[pIndex] = player.cHP;
                 if (hpDiff > 0 && monsterIndices.length > 0) {
+                    const isCrit = player.dmgCounter == player.critCounter;
                     if (monsterIndices.length > 1) {
                         monsterIndices.forEach((monsterIndex) => {
                             if(monsterIndex === castMonster) {
-                                registProjectile(pIndex, monsterIndex, hpDiff, true, 'autoAttack');
+                                registProjectile({
+                                    from: pIndex,
+                                    to: monsterIndex,
+                                    hpDiff: hpDiff,
+                                    reversed: true,
+                                    abilityHrid: 'autoAttack',
+                                    toPlayer: false,
+                                    isCrit: isCrit,
+                                });
                             }
                         });
                     } else {
-                        registProjectile(pIndex, monsterIndices[0], hpDiff, true, 'autoAttack');
+                        registProjectile({
+                            from: pIndex,
+                            to: monsterIndices[0],
+                            hpDiff: hpDiff,
+                            reversed: true,
+                            abilityHrid: 'autoAttack',
+                            toPlayer: false,
+                            isCrit: isCrit,
+                        });
                     }
                 } else if (hpDiff < 0 ) {
                     if (castPlayer > -1){
-                        registProjectile(castPlayer, pIndex, -hpDiff, false, 'heal', true);
+                        registProjectile({
+                            from: castPlayer,
+                            to: pIndex,
+                            hpDiff: -hpDiff,
+                            reversed: false,
+                            abilityHrid: 'heal',
+                            toPlayer: true
+                        });
                     }else{
-                        registProjectile(pIndex, pIndex, -hpDiff, false, 'selfHeal', true);
+                        registProjectile({
+                            from: pIndex,
+                            to: pIndex,
+                            hpDiff: -hpDiff,
+                            reversed: false,
+                            abilityHrid: 'selfHeal',
+                            toPlayer: true
+                        });
                     }
                 }
             }
@@ -119,7 +176,14 @@ function handleMessage(message) {
                 const hpDiff = pHP - player.cHP;
                 playersHP[pIndex] = player.cHP;
                 if (hpDiff < 0 ) {
-                    registProjectile(pIndex, pIndex, -hpDiff, false, 'selfHeal', true);
+                    registProjectile({
+                        from: pIndex,
+                        to: pIndex,
+                        hpDiff: -hpDiff,
+                        reversed: false,
+                        abilityHrid: 'selfHeal',
+                        toPlayer: true
+                    });
                 }
             }
         });
@@ -130,7 +194,14 @@ function handleMessage(message) {
                 const mpDiff = pMP - player.pMP;
                 playersMP[pIndex] = player.pMP;
                 if (mpDiff < 0 ) {
-                    registProjectile(pIndex, pIndex, -mpDiff, false, 'selfManaRegen', true);
+                    registProjectile({
+                        from: pIndex,
+                        to: pIndex,
+                        hpDiff: -mpDiff,
+                        reversed: false,
+                        abilityHrid: 'selfManaRegen',
+                        toPlayer: true
+                    });
                 }
             }
         });
@@ -141,7 +212,15 @@ function handleMessage(message) {
 // #region Main Logic
 
 // 动画效果
-function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'default', toPlayer = false) {
+function registProjectile({
+    from,
+    to,
+    hpDiff,
+    reversed = false,
+    abilityHrid = "default",
+    toPlayer = true,
+    isCrit = false,
+}) {
     if (reversed){
         if (!settingsMap.tracker6.isTrue) {
             return null;
@@ -166,9 +245,9 @@ function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'def
         let lineColor = "rgba("+trackerSetting.r+", "+trackerSetting.g+", "+trackerSetting.b+", 1)";
 
         if (!reversed) {
-            createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid);
+            createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid, isCrit);
         } else {
-            createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid);
+            createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid, isCrit);
         }
     }
 
