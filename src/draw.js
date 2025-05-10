@@ -175,6 +175,7 @@ export function animate() {
         fpsQueue.shift();
     }
     fps = Math.round(fpsQueue.reduce((a, b) => a + b) / fpsQueue.length);
+    fps = Math.min(Math.max(fps, 10), 300);
 
 
     // 完全清空画布
@@ -243,7 +244,8 @@ class Projectile {
         };
         
         // 大小参数 (范围1-100)
-        this.sizeScale = Math.max(1, Math.min(100, size)) / 10; // 转换为比例因子
+        const projectileScale = settingsMap.projectileScale.value || 1;
+        this.sizeScale = Math.max(1, Math.min(100, size)) / 10 * projectileScale; // 转换为比例因子
         
         // 外观属性
         this.size = 10 * this.sizeScale;
@@ -333,13 +335,13 @@ let activeOnHitAnimation = [];
 function createOnHitEffect(projectile) {
     const x = projectile.x;
     const y = projectile.y;
-    const size = projectile.size;
     const color = projectile.color;
     const otherInfo = projectile.otherInfo;
+    const projectileScale = settingsMap.projectileScale.value || 1;
 
     // Resize for onHit effect
-    const sizeScale = Math.max(1, Math.min(100, size)) / 20;
-    projectile.size = sizeScale;
+    const sizeScale = 
+    projectile.size = Math.max(1, Math.min(100, projectile.size)) / 20 / projectileScale;
 
     const sizeFactor = settingsMap.onHitScale.value || 1;
     const particleFactor = settingsMap.particleEffectRatio.value || 1;
@@ -399,7 +401,7 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         y: Math.floor((Math.random() - 0.1) * (combatUnitContainer.offsetHeight - padding)),
     }
 
-    const projectileLimit = 30;
+    const projectileLimit = settingsMap.projectileLimit.value || 30;
     const start = getElementCenter(startElement);
     const end = getElementCenter(endElement);
     end.x = Math.floor(end.x + randomRange.x);
@@ -421,9 +423,10 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
     if (damage > 0) {
         addDamageHPBar(endElement, damage);
     }
-    const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
-    projectiles.push(projectile);
-    if (projectiles.length > projectileLimit) {
+    if (projectiles.length <= projectileLimit) {
+        const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
+        projectiles.push(projectile);
+    } else {
         projectiles.shift();
     }
 }

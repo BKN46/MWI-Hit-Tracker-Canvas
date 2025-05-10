@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.0.0
+// @version        1.0.1
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1353,6 +1353,14 @@
 	let isZH = isZHInGameSetting; // MWITools 本身显示的语言默认由游戏内设置语言决定
 
 	let settingsMap = {
+	  projectileLimit: {
+	    id: "projectileLimit",
+	    desc: isZH ? "投射物数量限制" : "Projectile Limit",
+	    value: 30,
+	    min: 1,
+	    max: 100,
+	    step: 1
+	  },
 	  projectileScale: {
 	    id: "projectileScale",
 	    desc: isZH ? "投射物缩放" : "Projectile Scale",
@@ -2518,6 +2526,7 @@
 	    fpsQueue.shift();
 	  }
 	  fps = Math.round(fpsQueue.reduce((a, b) => a + b) / fpsQueue.length);
+	  fps = Math.min(Math.max(fps, 10), 300);
 
 	  // 完全清空画布
 	  ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2586,7 +2595,8 @@
 	    };
 
 	    // 大小参数 (范围1-100)
-	    this.sizeScale = Math.max(1, Math.min(100, size)) / 10; // 转换为比例因子
+	    const projectileScale = settingsMap.projectileScale.value || 1;
+	    this.sizeScale = Math.max(1, Math.min(100, size)) / 10 * projectileScale; // 转换为比例因子
 
 	    // 外观属性
 	    this.size = 10 * this.sizeScale;
@@ -2669,13 +2679,12 @@
 	function createOnHitEffect(projectile) {
 	  const x = projectile.x;
 	  const y = projectile.y;
-	  const size = projectile.size;
 	  const color = projectile.color;
 	  const otherInfo = projectile.otherInfo;
+	  const projectileScale = settingsMap.projectileScale.value || 1;
 
 	  // Resize for onHit effect
-	  const sizeScale = Math.max(1, Math.min(100, size)) / 20;
-	  projectile.size = sizeScale;
+	  projectile.size = Math.max(1, Math.min(100, projectile.size)) / 20 / projectileScale;
 	  const sizeFactor = settingsMap.onHitScale.value || 1;
 	  const particleFactor = settingsMap.particleEffectRatio.value || 1;
 	  const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
@@ -2727,7 +2736,7 @@
 	    x: Math.floor((Math.random() - 0.5) * (combatUnitContainer.offsetWidth - 2 * padding)),
 	    y: Math.floor((Math.random() - 0.1) * (combatUnitContainer.offsetHeight - padding))
 	  };
-	  const projectileLimit = 30;
+	  const projectileLimit = settingsMap.projectileLimit.value || 30;
 	  const start = getElementCenter(startElement);
 	  const end = getElementCenter(endElement);
 	  end.x = Math.floor(end.x + randomRange.x);
@@ -2746,9 +2755,10 @@
 	  if (damage > 0) {
 	    addDamageHPBar(endElement, damage);
 	  }
-	  const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
-	  projectiles.push(projectile);
-	  if (projectiles.length > projectileLimit) {
+	  if (projectiles.length <= projectileLimit) {
+	    const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
+	    projectiles.push(projectile);
+	  } else {
 	    projectiles.shift();
 	  }
 	}

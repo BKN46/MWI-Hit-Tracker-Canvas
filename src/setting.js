@@ -2,6 +2,14 @@ const isZHInGameSetting = localStorage.getItem("i18nextLng")?.toLowerCase()?.sta
 let isZH = isZHInGameSetting; // MWITools 本身显示的语言默认由游戏内设置语言决定
 
 export let settingsMap = {
+    projectileLimit: {
+        id: "projectileLimit",
+        desc: isZH ? "投射物数量限制":"Projectile Limit",
+        value: 30,
+        min: 1,
+        max: 100,
+        step: 1,
+    },
     projectileScale: {
         id: "projectileScale",
         desc: isZH ? "投射物缩放":"Projectile Scale",
