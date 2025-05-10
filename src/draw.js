@@ -420,10 +420,10 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         startElement: startElement,
         endElement: endElement,
     }
-    if (damage > 0) {
-        addDamageHPBar(endElement, damage);
-    }
     if (projectiles.length <= projectileLimit) {
+        if (damage > 0) {
+            addDamageHPBar(endElement, damage);
+        }
         const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
         projectiles.push(projectile);
     } else {

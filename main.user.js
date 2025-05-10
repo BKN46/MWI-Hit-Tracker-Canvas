@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.0.1
+// @version        1.0.2
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -2752,10 +2752,10 @@
 	    startElement: startElement,
 	    endElement: endElement
 	  };
-	  if (damage > 0) {
-	    addDamageHPBar(endElement, damage);
-	  }
 	  if (projectiles.length <= projectileLimit) {
+	    if (damage > 0) {
+	      addDamageHPBar(endElement, damage);
+	    }
 	    const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
 	    projectiles.push(projectile);
 	  } else {
