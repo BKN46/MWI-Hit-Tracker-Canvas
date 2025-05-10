@@ -62,7 +62,7 @@ export const projectileEffectsMap = {
         trailLength: 60,
         shake: true,
         onHit: {
-            "leaf": (size) => Math.min(Math.ceil(size * 14), 30),
+            "leaf": (size) => Math.min(Math.ceil(size * 30), 32),
         },
         draw: (ctx, p) => {
             const size = p.size * 3;
@@ -168,12 +168,12 @@ export const projectileEffectsMap = {
             "slashParticle": (size) => Math.min(Math.ceil(size * 8), 20),
         },
         draw: (ctx, p) => {
-            const length = p.size * 5;
-            const width = p.size * 0.35;
-            const arrowHeadLength = p.size * 1;
-            const arrowHeadWidth = p.size * 0.60;
-            const fletchingLength = p.size * 1.6;
-            const fletchingWidth = p.size * 1.0;
+            const length = p.size * 6.65;
+            const width = p.size * 0.47;
+            const arrowHeadLength = p.size * 1.33;
+            const arrowHeadWidth = p.size * 0.80;
+            const fletchingLength = p.size * 2.13;
+            const fletchingWidth = p.size * 1.33;
             
             ctx.save();
             ctx.translate(p.x, p.y);
@@ -198,7 +198,7 @@ export const projectileEffectsMap = {
             ctx.fillStyle = p.color;
             ctx.fill();
             
-            // Draw fletchings (simplified for 2D)
+            // Draw fletchings 
             ctx.beginPath();
             ctx.moveTo(-length/2, -width/2);
             ctx.lineTo(-length/2 - fletchingLength, -fletchingWidth/2);
@@ -216,8 +216,8 @@ export const projectileEffectsMap = {
             const startDelay = 5; // Number of frames to wait before showing trail
             if (i < startDelay) return;
             
-            const trailLength = p.size * 15;
-            const trailWidth = p.size * 0.2;
+            const trailLength = p.size * 20;
+            const trailWidth = p.size * 0.27;
             
             ctx.save();
             ctx.translate(p.x, p.y);
@@ -263,7 +263,7 @@ export const projectileEffectsMap = {
         trailLength: 35,
         shake: true,
         onHit: {
-            "star": (size) => Math.min(Math.ceil(size * 10), 20),
+            "lava": (size) => Math.min(Math.ceil(size * 6), 10),
         },
         draw: (ctx, p) => {
             ctx.beginPath();
@@ -271,5 +271,288 @@ export const projectileEffectsMap = {
             ctx.fillStyle = p.color;
             ctx.fill();
         },
+    },
+    'lavaPlume': {
+        speedFactor: 1,
+        trailLength: 35,
+        shake: true,
+        onHit: {
+            "lava": (size) => Math.min(Math.ceil(size * 4), 8),            
+            "smallParticle": (size) => Math.min(Math.ceil(size * 10), 60),
+        },
+        draw: (ctx, p) => {
+            // Draw main projectile
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+
+            // Create inner glow gradient
+            const innerGlow = ctx.createRadialGradient(
+                p.x, p.y, 0,
+                p.x, p.y, p.size * 1.5
+            );
+            innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            innerGlow.addColorStop(0.5, 'rgba(255, 7, 7, 0.4)');
+            innerGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = innerGlow;
+            ctx.fill();
+        },
+        glow: (ctx, p) => {
+            // Create outer glow gradient
+            const outerGlow = ctx.createRadialGradient(
+                p.x, p.y, p.size * 1.5,
+                p.x, p.y, p.size * 4
+            );
+            outerGlow.addColorStop(0, 'rgba(255, 12, 12, 0.3)');
+            outerGlow.addColorStop(0.5, 'rgba(250, 178, 24, 0.2)');
+            outerGlow.addColorStop(1, 'rgba(255, 50, 0, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+            ctx.fillStyle = outerGlow;
+            ctx.fill();
+
+            // Add pulsing effect
+            const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
+            const pulseGlow = ctx.createRadialGradient(
+                p.x, p.y, p.size * 2,
+                p.x, p.y, pulseSize
+            );
+            pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+            pulseGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+            ctx.fillStyle = pulseGlow;
+            ctx.fill();
+        },
+        trail: (ctx, p, i) => {
+            const alpha = i / p.totalLength;
+            const trailSize = p.size * (1 + Math.sin(Date.now() * 0.01) * 0.2);
+            
+            // Create glowing trail gradient
+            const trailGlow = ctx.createRadialGradient(
+                p.x, p.y, 0,
+                p.x, p.y, trailSize * 2
+            );
+            trailGlow.addColorStop(0, `rgba(255, 200, 50, ${alpha * 0.3})`);
+            trailGlow.addColorStop(1, `rgba(255, 100, 0, 0)`);
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+            ctx.fillStyle = trailGlow;
+            ctx.fill();
+        }
+    },
+    'iceBlast': {
+        speedFactor: 1,
+        trailLength: 35,
+        shake: true,
+        onHit: {
+            "ice": (size) => Math.min(Math.ceil(size * 8), 12),
+        },
+        draw: (ctx, p) => {
+            // Draw main projectile
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+
+            // Create inner glow gradient
+            const innerGlow = ctx.createRadialGradient(
+                p.x, p.y, 0,
+                p.x, p.y, p.size * 1.5
+            );
+            innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            innerGlow.addColorStop(0.5, 'rgba(200, 230, 255, 0.4)');
+            innerGlow.addColorStop(1, 'rgba(150, 200, 255, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = innerGlow;
+            ctx.fill();
+        },
+        glow: (ctx, p) => {
+            // Create outer glow gradient
+            const outerGlow = ctx.createRadialGradient(
+                p.x, p.y, p.size * 1.5,
+                p.x, p.y, p.size * 4
+            );
+            outerGlow.addColorStop(0, 'rgba(200, 230, 255, 0.3)');
+            outerGlow.addColorStop(0.5, 'rgba(150, 200, 255, 0.2)');
+            outerGlow.addColorStop(1, 'rgba(100, 150, 255, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+            ctx.fillStyle = outerGlow;
+            ctx.fill();
+
+            // Add pulsing effect
+            const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
+            const pulseGlow = ctx.createRadialGradient(
+                p.x, p.y, p.size * 2,
+                p.x, p.y, pulseSize
+            );
+            pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+            pulseGlow.addColorStop(1, 'rgba(150, 200, 255, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+            ctx.fillStyle = pulseGlow;
+            ctx.fill();
+        },
+        trail: (ctx, p, i) => {
+            const alpha = i / p.totalLength;
+            const trailSize = p.size * (1 + Math.sin(Date.now() * 0.01) * 0.2);
+            
+            // Create glowing trail gradient
+            const trailGlow = ctx.createRadialGradient(
+                p.x, p.y, 0,
+                p.x, p.y, trailSize * 2
+            );
+            trailGlow.addColorStop(0, `rgba(200, 230, 255, ${alpha * 0.3})`);
+            trailGlow.addColorStop(1, `rgba(150, 200, 255, 0)`);
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+            ctx.fillStyle = trailGlow;
+            ctx.fill();
+        }
+    },
+    'poisonDust': {
+        speedFactor: 1,
+        trailLength: 35,
+        shake: true,
+        onHit: {
+            "poison": (size) => Math.min(Math.ceil(size * 8), 12),
+        },
+        draw: (ctx, p) => {
+            // Draw main projectile
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+
+            // Create inner glow gradient
+            const innerGlow = ctx.createRadialGradient(
+                p.x, p.y, 0,
+                p.x, p.y, p.size * 1.5
+            );
+            innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            innerGlow.addColorStop(0.5, 'rgba(100, 255, 100, 0.4)');
+            innerGlow.addColorStop(1, 'rgba(50, 200, 50, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = innerGlow;
+            ctx.fill();
+        },
+        glow: (ctx, p) => {
+            // Create outer glow gradient
+            const outerGlow = ctx.createRadialGradient(
+                p.x, p.y, p.size * 1.5,
+                p.x, p.y, p.size * 4
+            );
+            outerGlow.addColorStop(0, 'rgba(100, 255, 100, 0.3)');
+            outerGlow.addColorStop(0.5, 'rgba(50, 200, 50, 0.2)');
+            outerGlow.addColorStop(1, 'rgba(0, 150, 0, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+            ctx.fillStyle = outerGlow;
+            ctx.fill();
+
+            // Add pulsing effect
+            const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
+            const pulseGlow = ctx.createRadialGradient(
+                p.x, p.y, p.size * 2,
+                p.x, p.y, pulseSize
+            );
+            pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+            pulseGlow.addColorStop(1, 'rgba(50, 200, 50, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+            ctx.fillStyle = pulseGlow;
+            ctx.fill();
+        },
+        trail: (ctx, p, i) => {
+            const alpha = i / p.totalLength;
+            p.x = p.x + (Math.random() - 0.5) * 5;
+            p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
+            ctx.beginPath();
+            const lineWidth = p.size * Math.sqrt(alpha);
+            ctx.strokeStyle = `${p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`)}`;
+            ctx.lineWidth = lineWidth;
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20);
+            ctx.stroke();
+            ctx.fill();
+        }
+    },
+    'thrust': {
+        speedFactor: 3,
+        gravity: -0.001,
+        trailLength: 0,
+        shake: true,
+        onHit: {
+            "smallParticle": (size) => Math.min(Math.ceil(size * 4), 10),
+            "pierce": (size) => Math.min(Math.ceil(size * 4), 6),
+            "shockwave": (size) => Math.min(Math.ceil(size * 4), 6),
+        },
+        draw: (ctx, p) => {
+            const shaftLength = p.size * 12; // Longer shaft
+            const shaftWidth = p.size * 0.8; // Thicker shaft
+            const tipLength = p.size * 3; // Length of the pointed tip
+            const tipWidth = p.size * 1.2; // Width at the base of the tip
+            
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(Math.atan2(p.velocity.y, p.velocity.x));
+            
+            // Draw shaft
+            ctx.beginPath();
+            ctx.moveTo(-shaftLength/2, -shaftWidth/2);
+            ctx.lineTo(shaftLength/2 - tipLength, -shaftWidth/2);
+            ctx.lineTo(shaftLength/2 - tipLength, shaftWidth/2);
+            ctx.lineTo(-shaftLength/2, shaftWidth/2);
+            ctx.closePath();
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            
+            // Draw tip
+            ctx.beginPath();
+            ctx.moveTo(shaftLength/2 - tipLength, -tipWidth/2);
+            ctx.lineTo(shaftLength/2, 0);
+            ctx.lineTo(shaftLength/2 - tipLength, tipWidth/2);
+            ctx.closePath();
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            
+            // Add highlight to shaft
+            ctx.beginPath();
+            ctx.moveTo(-shaftLength/2, -shaftWidth/2);
+            ctx.lineTo(shaftLength/2 - tipLength, -shaftWidth/2);
+            ctx.lineTo(shaftLength/2 - tipLength, 0);
+            ctx.lineTo(-shaftLength/2, 0);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.fill();
+            
+            // Add highlight to tip
+            ctx.beginPath();
+            ctx.moveTo(shaftLength/2 - tipLength, -tipWidth/2);
+            ctx.lineTo(shaftLength/2, 0);
+            ctx.lineTo(shaftLength/2 - tipLength, 0);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.fill();
+            
+            ctx.restore();
+        }
     }
 }
