@@ -57,6 +57,7 @@ function handleMessage(message) {
         let castPlayer = -1;
         playerIndices.forEach((userIndex) => {
             if(pMap[userIndex].cMP < playersMP[userIndex]){castPlayer = userIndex;}
+            if(pMap[userIndex].cMP > playersMP[userIndex]){registProjectile(userIndex, userIndex, pMap[userIndex].cMP-playersMP[userIndex], false, 'selfManaRegen', true);}
             playersMP[userIndex] = pMap[userIndex].cMP;
             if(pMap[userIndex].abilityHrid){playersAbility[userIndex] = pMap[userIndex].abilityHrid;}
         });
@@ -89,17 +90,17 @@ function handleMessage(message) {
                     if (monsterIndices.length > 1) {
                         monsterIndices.forEach((monsterIndex) => {
                             if(monsterIndex === castMonster) {
-                                registProjectile(pIndex, monsterIndex, hpDiff, true);
+                                registProjectile(pIndex, monsterIndex, hpDiff, true, 'autoAttack');
                             }
                         });
                     } else {
-                        registProjectile(pIndex, monsterIndices[0], hpDiff, true);
+                        registProjectile(pIndex, monsterIndices[0], hpDiff, true, 'autoAttack');
                     }
                 } else if (hpDiff < 0 ) {
                     if (castPlayer > -1){
                         registProjectile(castPlayer, pIndex, -hpDiff, false, 'heal', true);
                     }else{
-                        // 可能为吸血
+                        registProjectile(pIndex, pIndex, -hpDiff, false, 'selfHeal', true);
                     }
                 }
             }
@@ -110,6 +111,28 @@ function handleMessage(message) {
         const playerIndices = Object.keys(obj.pMap);
         playerIndices.forEach((userIndex) => {
             if(pMap[userIndex].abilityHrid){playersAbility[userIndex] = pMap[userIndex].abilityHrid;}
+        });
+
+        playersHP.forEach((pHP, pIndex) => {
+            const player = pMap[pIndex];
+            if (player) {
+                const hpDiff = pHP - player.cHP;
+                playersHP[pIndex] = player.cHP;
+                if (hpDiff < 0 ) {
+                    registProjectile(pIndex, pIndex, -hpDiff, false, 'selfHeal', true);
+                }
+            }
+        });
+
+        playersMP.forEach((pMP, pIndex) => {
+            const player = pMap[pIndex];
+            if (player) {
+                const mpDiff = pMP - player.pMP;
+                playersMP[pIndex] = player.pMP;
+                if (mpDiff < 0 ) {
+                    registProjectile(pIndex, pIndex, -mpDiff, false, 'selfManaRegen', true);
+                }
+            }
         });
     }
     return message;
@@ -128,6 +151,10 @@ function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'def
             return null;
         }
     }
+    if (["selfHeal", "selfManaRegen"].indexOf(abilityHrid) > -1 && !settingsMap.showSelfRegen.value) {
+        return null;
+    }
+
     const container = document.querySelector(".BattlePanel_playersArea__vvwlB");
     if (container && container.children.length > 0) {
         const playersContainer = container.children[0];
@@ -137,10 +164,6 @@ function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'def
 
         const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker"+from];
         let lineColor = "rgba("+trackerSetting.r+", "+trackerSetting.g+", "+trackerSetting.b+", 1)";
-        // console.log(`registProjectile: ${abilityHrid} ${hpDiff}`);
-        if (abilityHrid === 'heal') {
-            lineColor = "rgba(93, 212, 93, 0.8)";
-        }
 
         if (!reversed) {
             createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid);

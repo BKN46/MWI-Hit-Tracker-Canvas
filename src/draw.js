@@ -1,4 +1,5 @@
 import { projectileEffectsMap } from "./effects/projectile.js";
+import { abilityEffectsMap } from "./effects/abilities.js";
 import { onHitEffectsMap } from "./effects/hit.js";
 import { settingsMap } from "./setting.js";
 
@@ -97,13 +98,15 @@ function addDamageHPBar(element, damage) {
     hpBarBack.style.transition = "transform 0.5s ease-in-out";
     hpBarFront.parentNode.insertBefore(hpBarBack, hpBarFront); // Insert the back bar before the front bar
 
+    const dropDelay = Math.ceil(settingsMap.damageHpBarDropDelay.value || 300);
+
     setTimeout(() => {
         hpBarBack.style.transform = `scaleX(0)`;
-    }, 200);
+    }, dropDelay);
 
     setTimeout(() => {
         hpBarBack.remove();
-    }, 800);
+    }, dropDelay + 500);
 }
 
 // 更新和渲染所有命中效果
@@ -126,24 +129,30 @@ function updateOnHits() {
         });
 
         // 伤害文本
-        if (effect.otherInfo.damage) { 
-            const fontSize=  Math.min(Math.max(14, Math.pow(effect.otherInfo.damage,0.65)/2), 70);
+        if (effect.otherInfo.damage) {
+            const fontSizeScale = settingsMap.damageTextScale.value || 1;
+            const fontSizeLimit = settingsMap.damageTextSizeLimit.value || 70;
+            const fontAlpha = settingsMap.damageTextAlpha.value || 0.8;
+
+            const fontSize=  Math.min(Math.max(14, Math.pow(effect.otherInfo.damage,0.65)/2*fontSizeScale), fontSizeLimit);
             const damageText = `${effect.otherInfo.damage}`
             ctx.font = `${fontSize}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+
+            const textSize = ctx.measureText(damageText);
+            const textPosition = {
+                x: effect.otherInfo.end.x - textSize.width / 2 + 5,
+                y: effect.otherInfo.end.y - 20,
+            }
+
             // border
-            ctx.strokeStyle = effect.color;
+            ctx.strokeStyle = effect.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${fontAlpha})`);
             ctx.lineWidth = 6;
-            ctx.strokeText(damageText, effect.otherInfo.end.x, effect.otherInfo.end.y - 20);
+            ctx.strokeText(damageText, textPosition.x, textPosition.y);
             // main
             ctx.fillStyle = 'white';
-            const textWidth = ctx.measureText(damageText).width;
-            if (textWidth < 100) {
-                ctx.fillText(damageText, effect.otherInfo.end.x, effect.otherInfo.end.y - 20);
-            } else {
-                ctx.fillText(damageText, effect.otherInfo.end.x, effect.otherInfo.end.y - 20, textWidth + 10);
-            }
+            ctx.fillText(damageText, textPosition.x, textPosition.y);
         }
         ctx.restore();
     }
@@ -242,7 +251,7 @@ class Projectile {
         
         // 拖尾效果
         this.trail = [];
-        this.maxTrailLength = Math.floor((this.effect.trailLength || 50) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
+        this.maxTrailLength = Math.floor((this.effect.trailLength || 35) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
         this.maxTrailLength *= settingsMap.projectileTrailLength.value || 1; // 拖尾缩放因子
     }
 
@@ -255,7 +264,17 @@ class Projectile {
         this.y += this.velocity.y;
 
         // 更新拖尾
-        this.trail.push({ x: this.x, y: this.y });
+        if (this.effect.trailLength > 0){
+            this.trail.push({
+                x: this.x,
+                y: this.y,
+                vX: this.velocity.x,
+                vY: this.velocity.y,
+                color: this.color,
+                size: this.size,
+                totalLength: Math.max(this.trail.length, 1),
+            });
+        }
         if(this.trail.length > this.maxTrailLength) {
             this.trail.shift();
         }
@@ -264,15 +283,19 @@ class Projectile {
     draw(canvas) {
         // 绘制拖尾
         this.trail.forEach((pos, index) => {
-            const alpha = index / this.trail.length;
-            canvas.beginPath();
-            canvas.arc(pos.x, pos.y, this.size * alpha, 0, Math.PI * 2);
-            canvas.fillStyle = `${this.color}`;
-            canvas.fill();
+            if (this.effect.trail) {
+                this.effect.trail(canvas, pos, index);
+            } else {
+                projectileEffectsMap['fireball'].trail(canvas, pos, index);
+            }
         });
 
         // 绘制主体
-        this.effect.draw(canvas, this);
+        if (this.effect.draw) {
+            this.effect.draw(canvas, this);
+        } else {
+            projectileEffectsMap['fireball'].draw(canvas, this);
+        }
 
         // 添加光晕效果
         if (this.effect.glow) {
@@ -383,6 +406,9 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
     end.y = Math.floor(end.y + randomRange.y);
 
     const size = Math.min(Math.max(Math.pow(damage+200,0.7)/20, 4), 16)
+
+    projectileType = abilityEffectsMap[projectileType] || projectileType;
+
     const otherInfo = {
         type: projectileType,
         start: start,

@@ -197,15 +197,15 @@ export const onHitEffectsMap = {
             x: p => p.x,
             y: p => p.y,
             angle: p => Math.random() * Math.PI * 2,
-            size: p => 2 * p.size,
-            life: p => 250 * p.size, 
+            size: p => 3 * p.size,
+            life: p => 300 * p.size, 
             draw: (ctx, p) => {
                 if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
                 if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
                 p.life -= 2; // Even slower fade
                 
                 if (p.life > 0) {
-                    const alpha = p.life / 500;
+                    const alpha = p.life / 300 * p.size;
                     ctx.save();
                     ctx.translate(p.x, p.y);
                     ctx.rotate(p.angle);
@@ -322,52 +322,52 @@ export const onHitEffectsMap = {
         }
     },
     "waterRipple": {
-            x: p => p.x,
-            y: p => p.y,
-            size: p => 7 * p.size,
-            life: p => 1200 * p.size,
-            draw: (ctx, p) => {
-                if (!p.ripples) {
-                    p.ripples = [
-                        { radius: 0, opacity: 0.5, width: 3, speed: 0.7 },  // Fast, bright inner ripple
-                        { radius: 0, opacity: 0.5, width: 2, speed: 0.5 },  // Medium ripple
-                        { radius: 0, opacity: 0.5, width: 1.5, speed: 0.3 } // Slow, faint outer ripple
-                    ];
+        x: p => p.x,
+        y: p => p.y,
+        size: p => 3 * p.size,
+        life: p => 1200 * p.size,
+        draw: (ctx, p) => {
+            if (!p.ripples) {
+                p.ripples = [
+                    { radius: 0, opacity: 0.5, width: 3, speed: 0.7 },  // Fast, bright inner ripple
+                    { radius: 0, opacity: 0.5, width: 2, speed: 0.5 },  // Medium ripple
+                    { radius: 0, opacity: 0.5, width: 1.5, speed: 0.3 } // Slow, faint outer ripple
+                ];
+            }
+            
+            p.life -= 1;
+            
+            // Update each ripple
+            p.ripples.forEach((ripple, index) => {
+                // Expand the ripple
+                ripple.radius += ripple.speed;
+                
+                // Calculate opacity based on radius
+                const maxRadius = 30 * p.size;
+                const fadeStart = maxRadius * 0.6;
+                if (ripple.radius > fadeStart) {
+                    ripple.opacity *= 0.98; // Gradual fade out
                 }
                 
-                p.life -= 1;
-                
-                // Update each ripple
-                p.ripples.forEach((ripple, index) => {
-                    // Expand the ripple
-                    ripple.radius += ripple.speed;
+                // Draw the ripple if it's still visible
+                if (ripple.opacity > 0.05 && ripple.radius < maxRadius) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = p.color.replace('0.8', ripple.opacity.toString());
+                    ctx.lineWidth = ripple.width * (1 - ripple.radius / maxRadius);
+                    ctx.arc(p.x, p.y, ripple.radius, 0, Math.PI * 2);
+                    ctx.stroke();
                     
-                    // Calculate opacity based on radius
-                    const maxRadius = 30 * p.size;
-                    const fadeStart = maxRadius * 0.6;
-                    if (ripple.radius > fadeStart) {
-                        ripple.opacity *= 0.98; // Gradual fade out
-                    }
-                    
-                    // Draw the ripple if it's still visible
-                    if (ripple.opacity > 0.05 && ripple.radius < maxRadius) {
+                    // Add a second, fainter ring for more water-like effect
+                    if (ripple.radius > 5) {
                         ctx.beginPath();
-                        ctx.strokeStyle = p.color.replace('0.8', ripple.opacity.toString());
-                        ctx.lineWidth = ripple.width * (1 - ripple.radius / maxRadius);
-                        ctx.arc(p.x, p.y, ripple.radius, 0, Math.PI * 2);
+                        ctx.strokeStyle = p.color.replace('0.8', (ripple.opacity * 0.5).toString());
+                        ctx.lineWidth = ripple.width * 0.5 * (1 - ripple.radius / maxRadius);
+                        ctx.arc(p.x, p.y, ripple.radius - 2, 0, Math.PI * 2);
                         ctx.stroke();
-                        
-                        // Add a second, fainter ring for more water-like effect
-                        if (ripple.radius > 5) {
-                            ctx.beginPath();
-                            ctx.strokeStyle = p.color.replace('0.8', (ripple.opacity * 0.5).toString());
-                            ctx.lineWidth = ripple.width * 0.5 * (1 - ripple.radius / maxRadius);
-                            ctx.arc(p.x, p.y, ripple.radius - 2, 0, Math.PI * 2);
-                            ctx.stroke();
-                        }
                     }
-                });
-            }
+                }
+            });
+        }
     },
     "waterSplash": {
         x: p => p.x,

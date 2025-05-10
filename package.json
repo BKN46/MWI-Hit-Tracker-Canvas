@@ -2,7 +2,7 @@
   "name": "MWI-Hit-Tracker-Canvas",
   "description": "A Tampermonkey script to track MWI hits on Canvas.",
   "author": "Artintel, BKN46",
-  "version": "0.9.5",
+  "version": "1.0.0",
   "scripts": {
     "dev": "rollup --config --environment BUILD:development --watch",
     "build": "rollup --config",

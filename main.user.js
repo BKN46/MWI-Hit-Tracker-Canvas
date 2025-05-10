@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        0.9.5
+// @version        1.0.0
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1422,6 +1422,43 @@
 	    desc: isZH ? "原版伤害显示" : "Original Damage Display",
 	    value: false
 	  },
+	  damageTextScale: {
+	    id: "damageTextScale",
+	    desc: isZH ? "伤害文本大小" : "Damage Text Scale",
+	    value: 1.0,
+	    min: 0.1,
+	    max: 3.0,
+	    step: 0.1
+	  },
+	  damageTextAlpha: {
+	    id: "damageTextAlpha",
+	    desc: isZH ? "伤害文本不透明度" : "Damage Text Alpha",
+	    value: 0.8,
+	    min: 0.0,
+	    max: 1.0,
+	    step: 0.01
+	  },
+	  damageTextSizeLimit: {
+	    id: "damageTextSizeLimit",
+	    desc: isZH ? "伤害文本尺寸上限" : "Damage Text Size Limit",
+	    value: 70,
+	    min: 15,
+	    max: 200,
+	    step: 1
+	  },
+	  showSelfRegen: {
+	    id: "showSelfRegen",
+	    desc: isZH ? "显示玩家被动回复效果" : "Show Self Regeneration",
+	    value: true
+	  },
+	  damageHpBarDropDelay: {
+	    id: "damageHpBarDropDelay",
+	    desc: isZH ? "血条掉落延迟" : "Hp Bar Drop Delay",
+	    value: 300,
+	    min: 50,
+	    max: 1000,
+	    step: 50
+	  },
 	  tracker0: {
 	    id: "tracker0",
 	    desc: isZH ? "玩家颜色 #1" : "Player Color1",
@@ -1710,107 +1747,6 @@
 `;
 	document.head.appendChild(style);
 
-	/*
-	projectEffect = {
-	    speedFactor: 1,         // 速度因子
-	    trailLength: 50,        // 尾迹长度
-	    gravity: 0.2,           // 重力
-	    shake: true,            // 是否震动
-	    color: rgba(0, 0, 0, 0),    // 强制颜色
-	    onHit: {                // 碰撞时的粒子效果
-	        "smoke": 0, 
-	    },
-	    draw: (ctx, p) => {     // 绘制函数, ctx为canvas的上下文对象, p为Projectile对象
-
-	    },
-	    glow: (ctx, p) => {     // 光晕绘制函数, ctx为canvas的上下文对象, p为Projectile对象，空则不绘制
-
-	    },
-	}
-	*/
-
-	const projectileEffectsMap = {
-	  'fireball': {
-	    speedFactor: 1,
-	    trailLength: 35,
-	    shake: true,
-	    onHit: {
-	      "smoke": size => Math.min(Math.ceil(size * 4), 8),
-	      "ember": size => Math.min(Math.ceil(size * 10), 40),
-	      "shockwave": size => Math.min(Math.ceil(size), 4),
-	      "smallParticle": size => Math.min(Math.ceil(size * 4), 10)
-	    },
-	    draw: (ctx, p) => {
-	      ctx.beginPath();
-	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-	      ctx.fillStyle = p.color;
-	      ctx.fill();
-	    },
-	    glow: (ctx, p) => {
-	      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
-	      gradient.addColorStop(0, `${p.color}`);
-	      gradient.addColorStop(1, `${p.color}`);
-	      ctx.fillStyle = gradient;
-	    }
-	  },
-	  'nature': {
-	    speedFactor: 1,
-	    trailLength: 35,
-	    shake: true,
-	    onHit: {
-	      "leaf": size => Math.min(Math.ceil(size * 8), 16)
-	    },
-	    draw: (ctx, p) => {
-	      ctx.beginPath();
-	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-	      ctx.fillStyle = p.color;
-	      ctx.fill();
-	    },
-	    glow: (ctx, p) => {
-	      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
-	      gradient.addColorStop(0, `${p.color}`);
-	      gradient.addColorStop(1, `${p.color}`);
-	      ctx.fillStyle = gradient;
-	    }
-	  },
-	  'heal': {
-	    trailLength: 60,
-	    shake: false,
-	    onHit: {
-	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
-	    },
-	    draw: (ctx, p) => {
-	      // draw a star
-	      ctx.beginPath();
-	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-	      ctx.fillStyle = p.color;
-	      ctx.fill();
-	    }
-	  },
-	  'selfHeal': {
-	    speedFactor: 10,
-	    trailLength: 0,
-	    gravity: 0,
-	    shake: false,
-	    color: 'rgba(0, 255, 0, 0.8)',
-	    onHit: {
-	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
-	    },
-	    draw: (ctx, p) => {}
-	  },
-	  'selfManaRegen': {
-	    speedFactor: 10,
-	    trailLength: 0,
-	    gravity: 0,
-	    shake: false,
-	    color: 'rgba(68, 120, 241, 0.8)',
-	    onHit: {
-	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
-	    },
-	    draw: (ctx, p) => {}
-	  }
-	};
-
 	const onHitEffectsMap = {
 	  "smoke": {
 	    angle: p => Math.random() * Math.PI * 2,
@@ -1989,15 +1925,15 @@
 	    x: p => p.x,
 	    y: p => p.y,
 	    angle: p => Math.random() * Math.PI * 2,
-	    size: p => 2 * p.size,
-	    life: p => 250 * p.size,
+	    size: p => 3 * p.size,
+	    life: p => 300 * p.size,
 	    draw: (ctx, p) => {
 	      if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
 	      if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
 	      p.life -= 2; // Even slower fade
 
 	      if (p.life > 0) {
-	        const alpha = p.life / 500;
+	        const alpha = p.life / 300 * p.size;
 	        ctx.save();
 	        ctx.translate(p.x, p.y);
 	        ctx.rotate(p.angle);
@@ -2082,7 +2018,7 @@
 	  "waterRipple": {
 	    x: p => p.x,
 	    y: p => p.y,
-	    size: p => 7 * p.size,
+	    size: p => 3 * p.size,
 	    life: p => 1200 * p.size,
 	    draw: (ctx, p) => {
 	      if (!p.ripples) {
@@ -2199,6 +2135,230 @@
 	  }
 	};
 
+	/*
+	projectEffect = {
+	    speedFactor: 1,         // 速度因子
+	    trailLength: 50,        // 尾迹长度
+	    gravity: 0.2,           // 重力
+	    shake: true,            // 是否震动
+	    color: rgba(0, 0, 0, 0),    // 强制颜色
+	    onHit: {                // 碰撞时的粒子效果
+	        "smoke": 0, 
+	    },
+	    draw: (ctx, p) => {     // 绘制函数, ctx为canvas的上下文对象, p为Projectile对象
+
+	    },
+	    glow: (ctx, p) => {     // 光晕绘制函数, ctx为canvas的上下文对象, p为Projectile对象，空则不绘制
+
+	    },
+	}
+	*/
+
+	const projectileEffectsMap = {
+	  'fireball': {
+	    speedFactor: 1,
+	    trailLength: 35,
+	    shake: true,
+	    onHit: {
+	      "smoke": size => Math.min(Math.ceil(size * 4), 8),
+	      "ember": size => Math.min(Math.ceil(size * 10), 40),
+	      "shockwave": size => Math.min(Math.ceil(size), 4),
+	      "smallParticle": size => Math.min(Math.ceil(size * 4), 10)
+	    },
+	    draw: (ctx, p) => {
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+	    },
+	    glow: (ctx, p) => {
+	      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+	      gradient.addColorStop(0, `${p.color}`);
+	      gradient.addColorStop(1, `${p.color}`);
+	      ctx.fillStyle = gradient;
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = i / p.totalLength;
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+	      ctx.fill();
+	    }
+	  },
+	  'nature': {
+	    speedFactor: 1,
+	    gravity: 0.1,
+	    trailLength: 60,
+	    shake: true,
+	    onHit: {
+	      "leaf": size => Math.min(Math.ceil(size * 14), 30)
+	    },
+	    draw: (ctx, p) => {
+	      const size = p.size * 3;
+	      p.rotation = Math.atan2(p.velocity.y, p.velocity.x) - Math.PI / 2;
+	      ctx.save();
+	      ctx.translate(p.x, p.y);
+	      ctx.rotate(p.rotation);
+	      ctx.scale(p.scale, 1);
+	      ctx.beginPath();
+	      ctx.moveTo(0, -size);
+	      ctx.bezierCurveTo(size / 2, -size / 2, size / 2, 0, 0, size);
+	      ctx.bezierCurveTo(-size / 2, 0, -size / 2, -size / 2, 0, -size);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+	      ctx.restore();
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = i / p.totalLength;
+	      p.x = p.x + (Math.random() - 0.5) * 5;
+	      p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
+	      ctx.beginPath();
+	      const lineWidth = p.size * Math.sqrt(alpha);
+	      ctx.strokeStyle = `${p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`)}`;
+	      ctx.lineWidth = lineWidth;
+	      ctx.moveTo(p.x, p.y);
+	      ctx.lineTo(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20);
+	      ctx.stroke();
+	      ctx.fill();
+	    }
+	  },
+	  'slash': {
+	    speedFactor: 2,
+	    gravity: -0.2,
+	    trailLength: 30,
+	    shake: true,
+	    onHit: {
+	      "slash": size => Math.min(Math.ceil(size * 4), 8),
+	      "slashParticle": size => Math.min(Math.ceil(size * 8), 20)
+	    }
+	    // draw: (ctx, p) => {
+	    //     ctx.beginPath();
+	    //     ctx.moveTo(p.x, p.y + p.size * 2);
+	    //     ctx.lineTo(p.x - p.size * 2, p.y - p.size * 2);
+	    //     ctx.lineTo(p.x + p.size * 2, p.y - p.size * 2);
+	    //     ctx.closePath();
+	    //     ctx.fillStyle = p.color;
+	    //     ctx.fill();
+	    // }
+	  },
+	  'water': {
+	    speedFactor: 1.2,
+	    trailLength: 60,
+	    shake: true,
+	    onHit: {
+	      "waterRipple": size => Math.min(Math.ceil(size * 8), 12),
+	      "waterSplash": size => Math.min(Math.ceil(size * 8), 20)
+	    },
+	    draw: (ctx, p) => {
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = i / p.totalLength;
+	      p.x = p.x + (Math.random() - 0.5) * 5;
+	      p.y = p.y - (Math.random() - 0.5) * 1;
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+	      ctx.fill();
+	    }
+	  },
+	  'heal': {
+	    trailLength: 60,
+	    shake: false,
+	    color: 'rgba(93, 212, 93, 0.8)',
+	    onHit: {
+	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
+	    },
+	    draw: (ctx, p) => {
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+	    }
+	  },
+	  'range': {
+	    speedFactor: 1.5,
+	    gravity: 0.2,
+	    trailLength: 30,
+	    shake: true,
+	    onHit: {
+	      "shockwave": size => Math.min(Math.ceil(size), 4),
+	      "slashParticle": size => Math.min(Math.ceil(size * 8), 20)
+	    },
+	    draw: (ctx, p) => {
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+	    },
+	    glow: (ctx, p) => {
+	      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+	      gradient.addColorStop(0, `${p.color}`);
+	      gradient.addColorStop(1, `${p.color}`);
+	      ctx.fillStyle = gradient;
+	    }
+	  },
+	  'selfHeal': {
+	    speedFactor: 10,
+	    trailLength: 0,
+	    gravity: 0,
+	    shake: false,
+	    color: 'rgba(93, 212, 93, 0.5)',
+	    onHit: {
+	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
+	    },
+	    draw: (ctx, p) => {}
+	  },
+	  'selfManaRegen': {
+	    speedFactor: 10,
+	    trailLength: 0,
+	    gravity: 0,
+	    shake: false,
+	    color: 'rgba(68, 120, 241, 0.8)',
+	    onHit: {
+	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
+	    },
+	    draw: (ctx, p) => {}
+	  }
+	};
+
+	const abilityEffectsMap = {
+	  'autoAttack': 'slash',
+	  'default': 'fireball',
+	  'heal': 'heal',
+	  '/abilities/fireball': "fireball",
+	  '/abilities/firestorm': "fireball",
+	  '/abilities/flame_blast': "fireball",
+	  '/abilities/smoke_burst': "fireball",
+	  '/abilities/aqua_arrow': "water",
+	  '/abilities/frost_surge': "water",
+	  '/abilities/ice_spear': "water",
+	  '/abilities/mana_spring': "water",
+	  '/abilities/water_strike': "water",
+	  '/abilities/entangle': "nature",
+	  '/abilities/natures_veil': "nature",
+	  '/abilities/toxic_pollen': "nature",
+	  '/abilities/penetrating_shot': "range",
+	  '/abilities/pestilent_shot': "range",
+	  '/abilities/steady_shot': "range",
+	  '/abilities/quick_shot': "range",
+	  '/abilities/rain_of_arrows': "range",
+	  '/abilities/silencing_shot': "range",
+	  '/abilities/crippling_slash': "slash",
+	  '/abilities/penetrating_strike': "slash",
+	  '/abilities/impale': "slash",
+	  '/abilities/maim': "slash",
+	  '/abilities/poke': "slash",
+	  '/abilities/puncture': "slash",
+	  '/abilities/scratch': "slash",
+	  '/abilities/smack': "slash",
+	  '/abilities/sweep': "slash",
+	  '/abilities/stunning_blow': "slash"
+	};
+
 	const canvas = initTrackerCanvas();
 	const ctx = canvas.getContext('2d');
 	function initTrackerCanvas() {
@@ -2289,12 +2449,13 @@
 	  hpBarBack.style.transition = "transform 0.5s ease-in-out";
 	  hpBarFront.parentNode.insertBefore(hpBarBack, hpBarFront); // Insert the back bar before the front bar
 
+	  const dropDelay = Math.ceil(settingsMap.damageHpBarDropDelay.value || 300);
 	  setTimeout(() => {
 	    hpBarBack.style.transform = `scaleX(0)`;
-	  }, 200);
+	  }, dropDelay);
 	  setTimeout(() => {
 	    hpBarBack.remove();
-	  }, 800);
+	  }, dropDelay + 500);
 	}
 
 	// 更新和渲染所有命中效果
@@ -2316,23 +2477,27 @@
 
 	    // 伤害文本
 	    if (effect.otherInfo.damage) {
-	      const fontSize = Math.min(Math.max(14, Math.pow(effect.otherInfo.damage, 0.65) / 2), 70);
+	      const fontSizeScale = settingsMap.damageTextScale.value || 1;
+	      const fontSizeLimit = settingsMap.damageTextSizeLimit.value || 70;
+	      const fontAlpha = settingsMap.damageTextAlpha.value || 0.8;
+	      const fontSize = Math.min(Math.max(14, Math.pow(effect.otherInfo.damage, 0.65) / 2 * fontSizeScale), fontSizeLimit);
 	      const damageText = `${effect.otherInfo.damage}`;
 	      ctx.font = `${fontSize}px Arial`;
 	      ctx.textAlign = 'center';
 	      ctx.textBaseline = 'middle';
+	      const textSize = ctx.measureText(damageText);
+	      const textPosition = {
+	        x: effect.otherInfo.end.x - textSize.width / 2 + 5,
+	        y: effect.otherInfo.end.y - 20
+	      };
+
 	      // border
-	      ctx.strokeStyle = effect.color;
+	      ctx.strokeStyle = effect.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${fontAlpha})`);
 	      ctx.lineWidth = 6;
-	      ctx.strokeText(damageText, effect.otherInfo.end.x, effect.otherInfo.end.y - 20);
+	      ctx.strokeText(damageText, textPosition.x, textPosition.y);
 	      // main
 	      ctx.fillStyle = 'white';
-	      const textWidth = ctx.measureText(damageText).width;
-	      if (textWidth < 100) {
-	        ctx.fillText(damageText, effect.otherInfo.end.x, effect.otherInfo.end.y - 20);
-	      } else {
-	        ctx.fillText(damageText, effect.otherInfo.end.x, effect.otherInfo.end.y - 20, textWidth + 10);
-	      }
+	      ctx.fillText(damageText, textPosition.x, textPosition.y);
 	    }
 	    ctx.restore();
 	  }
@@ -2429,7 +2594,7 @@
 
 	    // 拖尾效果
 	    this.trail = [];
-	    this.maxTrailLength = Math.floor((this.effect.trailLength || 50) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
+	    this.maxTrailLength = Math.floor((this.effect.trailLength || 35) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
 	    this.maxTrailLength *= settingsMap.projectileTrailLength.value || 1; // 拖尾缩放因子
 	  }
 	  update() {
@@ -2441,10 +2606,17 @@
 	    this.y += this.velocity.y;
 
 	    // 更新拖尾
-	    this.trail.push({
-	      x: this.x,
-	      y: this.y
-	    });
+	    if (this.effect.trailLength > 0) {
+	      this.trail.push({
+	        x: this.x,
+	        y: this.y,
+	        vX: this.velocity.x,
+	        vY: this.velocity.y,
+	        color: this.color,
+	        size: this.size,
+	        totalLength: Math.max(this.trail.length, 1)
+	      });
+	    }
 	    if (this.trail.length > this.maxTrailLength) {
 	      this.trail.shift();
 	    }
@@ -2452,15 +2624,19 @@
 	  draw(canvas) {
 	    // 绘制拖尾
 	    this.trail.forEach((pos, index) => {
-	      const alpha = index / this.trail.length;
-	      canvas.beginPath();
-	      canvas.arc(pos.x, pos.y, this.size * alpha, 0, Math.PI * 2);
-	      canvas.fillStyle = `${this.color}`;
-	      canvas.fill();
+	      if (this.effect.trail) {
+	        this.effect.trail(canvas, pos, index);
+	      } else {
+	        projectileEffectsMap['fireball'].trail(canvas, pos, index);
+	      }
 	    });
 
 	    // 绘制主体
-	    this.effect.draw(canvas, this);
+	    if (this.effect.draw) {
+	      this.effect.draw(canvas, this);
+	    } else {
+	      projectileEffectsMap['fireball'].draw(canvas, this);
+	    }
 
 	    // 添加光晕效果
 	    if (this.effect.glow) {
@@ -2557,6 +2733,7 @@
 	  end.x = Math.floor(end.x + randomRange.x);
 	  end.y = Math.floor(end.y + randomRange.y);
 	  const size = Math.min(Math.max(Math.pow(damage + 200, 0.7) / 20, 4), 16);
+	  projectileType = abilityEffectsMap[projectileType] || projectileType;
 	  const otherInfo = {
 	    type: projectileType,
 	    start: start,
@@ -2644,6 +2821,9 @@
 	      if (pMap[userIndex].cMP < playersMP[userIndex]) {
 	        castPlayer = userIndex;
 	      }
+	      if (pMap[userIndex].cMP > playersMP[userIndex]) {
+	        registProjectile(userIndex, userIndex, pMap[userIndex].cMP - playersMP[userIndex], false, 'selfManaRegen', true);
+	      }
 	      playersMP[userIndex] = pMap[userIndex].cMP;
 	      if (pMap[userIndex].abilityHrid) {
 	        playersAbility[userIndex] = pMap[userIndex].abilityHrid;
@@ -2676,15 +2856,17 @@
 	          if (monsterIndices.length > 1) {
 	            monsterIndices.forEach(monsterIndex => {
 	              if (monsterIndex === castMonster) {
-	                registProjectile(pIndex, monsterIndex, hpDiff, true);
+	                registProjectile(pIndex, monsterIndex, hpDiff, true, 'autoAttack');
 	              }
 	            });
 	          } else {
-	            registProjectile(pIndex, monsterIndices[0], hpDiff, true);
+	            registProjectile(pIndex, monsterIndices[0], hpDiff, true, 'autoAttack');
 	          }
 	        } else if (hpDiff < 0) {
 	          if (castPlayer > -1) {
 	            registProjectile(castPlayer, pIndex, -hpDiff, false, 'heal', true);
+	          } else {
+	            registProjectile(pIndex, pIndex, -hpDiff, false, 'selfHeal', true);
 	          }
 	        }
 	      }
@@ -2695,6 +2877,26 @@
 	    playerIndices.forEach(userIndex => {
 	      if (pMap[userIndex].abilityHrid) {
 	        playersAbility[userIndex] = pMap[userIndex].abilityHrid;
+	      }
+	    });
+	    playersHP.forEach((pHP, pIndex) => {
+	      const player = pMap[pIndex];
+	      if (player) {
+	        const hpDiff = pHP - player.cHP;
+	        playersHP[pIndex] = player.cHP;
+	        if (hpDiff < 0) {
+	          registProjectile(pIndex, pIndex, -hpDiff, false, 'selfHeal', true);
+	        }
+	      }
+	    });
+	    playersMP.forEach((pMP, pIndex) => {
+	      const player = pMap[pIndex];
+	      if (player) {
+	        const mpDiff = pMP - player.pMP;
+	        playersMP[pIndex] = player.pMP;
+	        if (mpDiff < 0) {
+	          registProjectile(pIndex, pIndex, -mpDiff, false, 'selfManaRegen', true);
+	        }
 	      }
 	    });
 	  }
@@ -2714,6 +2916,9 @@
 	      return null;
 	    }
 	  }
+	  if (["selfHeal", "selfManaRegen"].indexOf(abilityHrid) > -1 && !settingsMap.showSelfRegen.value) {
+	    return null;
+	  }
 	  const container = document.querySelector(".BattlePanel_playersArea__vvwlB");
 	  if (container && container.children.length > 0) {
 	    const playersContainer = container.children[0];
@@ -2722,10 +2927,6 @@
 	    const effectTo = toPlayer ? playersContainer.children[to] : monsterContainer.children[to];
 	    const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker" + from];
 	    let lineColor = "rgba(" + trackerSetting.r + ", " + trackerSetting.g + ", " + trackerSetting.b + ", 1)";
-	    // console.log(`registProjectile: ${abilityHrid} ${hpDiff}`);
-	    if (abilityHrid === 'heal') {
-	      lineColor = "rgba(93, 212, 93, 0.8)";
-	    }
 	    if (!reversed) {
 	      createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid);
 	    } else {
