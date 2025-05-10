@@ -1700,7 +1700,7 @@
 	          settingsMap[option.id].g = option.g;
 	          settingsMap[option.id].b = option.b;
 	        }
-	      } else {
+	      } else if (option) {
 	        settingsMap[option.id].value = option.value;
 	      }
 	    }
