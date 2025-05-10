@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projectile Effects Debugger</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .BattlePanel_combatUnitGrid__2hTAM {
+            height: 160px;
+            width: 106px;
+            position: fixed;
+            background-color: gray;
+            align-items: center;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="game.css">
+</head>
+<body>
+    <div class="container">
+        <div class="BattlePanel_playersArea__vvwlB">
+            <div class="BattlePanel_combatUnitGrid__2hTAM" style="top: 100px;left: 100px;">
+                <div class="CombatUnit_combatUnit__1m3XT">
+                    <div class="CombatUnit_name__1SlO1" style="text-align: center;">Player</div>
+                    <div class="HitpointsBar_hitpointsBar__2vIqC HitpointsBar_noBorderRadius__3sfr7">
+                        <div class="HitpointsBar_currentHp__5exLr" style="transform: scaleX(0.8);"></div>
+                        <div class="HitpointsBar_hpValue__xNp7m">800/1000</div>
+                    </div>
+                    <div class="ManapointsBar_manapointsBar__4Kw3W ManapointsBar_noBorderRadius__1G8KH">
+                        <div class="ManapointsBar_currentMp__3xpqC" style="transform: scaleX(0.6);"></div>
+                        <div class="ManapointsBar_mpValue__3dij7">600/1000</div>
+                    </div>
+                    <div class="CombatUnit_model__2qQML">
+                        <div class="CombatUnit_unitIconContainer__kVrff"></div>
+                        <div class="CombatUnit_eliteIcon__2WGT0"></div>
+                        <div class="CombatUnit_splatsContainer__2xcc0"></div>
+                    </div>
+                    <div class="ProgressBar_progressBar__Os8fm ProgressBar_noBorderRadius__25UzP">
+                        <div class="ProgressBar_innerBarContainer__3WP-N">
+                            <div class="ProgressBar_innerBar__3Z_sf ProgressBar_active__Do7AF" style="transform: scaleX(0.6);"></div>
+                        </div>
+                        <div class="ProgressBar_text__102Yn">自动攻击</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="BattlePanel_monstersArea__2dzrY">
+            <div class="BattlePanel_combatUnitGrid__2hTAM" style="top: 100px;left: 500px;">
+                <div class="CombatUnit_combatUnit__1m3XT">
+                    <div class="CombatUnit_name__1SlO1" style="text-align: center;">Monster</div>
+                    <div class="HitpointsBar_hitpointsBar__2vIqC HitpointsBar_noBorderRadius__3sfr7">
+                        <div class="HitpointsBar_currentHp__5exLr" style="transform: scaleX(0.2);"></div>
+                        <div class="HitpointsBar_hpValue__xNp7m">200/1000</div>
+                    </div>
+                    <div class="ManapointsBar_manapointsBar__4Kw3W ManapointsBar_noBorderRadius__1G8KH">
+                        <div class="ManapointsBar_currentMp__3xpqC" style="transform: scaleX(0.2);"></div>
+                        <div class="ManapointsBar_mpValue__3dij7">200/1000</div>
+                    </div>
+                    <div class="CombatUnit_model__2qQML">
+                        <div class="CombatUnit_unitIconContainer__kVrff"></div>
+                        <div class="CombatUnit_eliteIcon__2WGT0"></div>
+                        <div class="CombatUnit_splatsContainer__2xcc0"></div>
+                    </div>
+                    <div class="ProgressBar_progressBar__Os8fm ProgressBar_noBorderRadius__25UzP">
+                        <div class="ProgressBar_innerBarContainer__3WP-N">
+                            <div class="ProgressBar_innerBar__3Z_sf ProgressBar_active__Do7AF" style="transform: scaleX(0.4);"></div>
+                        </div>
+                        <div class="ProgressBar_text__102Yn">自动攻击</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button id="test" style="position: fixed;top:400px;left:200px;width: 100px;">test</button>
+    </div>
+
+    <script type="module">
+        import { projectileEffectsMap } from '../effects/projectile.js';
+        import { onHitEffectsMap } from '../effects/hit.js';
+        import { animate, createProjectile } from "../draw.js";
+        import { waitForSetttins, settingsMap } from "../setting.js";
+
+        const testButton = document.getElementById("test");
+        testButton.addEventListener("click", () => {
+            // 测试动画
+            const from = 0; // 玩家索引
+            const to = 0; // 敌人索引
+            const hpDiff = Math.floor(Math.random() * 800 + 50); // 伤害值
+            const reversed = false; // 是否反向
+            const abilityHrid = 'nature'; // 技能ID
+            const toPlayer = false; // 是否目标为玩家
+
+            console.log(`registProjectile: ${abilityHrid} ${hpDiff}`);
+
+            registProjectile(from, to, hpDiff, reversed, abilityHrid, toPlayer);
+        });
+
+        // 动画效果
+        function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'default', toPlayer = false) {
+            if (reversed){
+                if (!settingsMap.tracker6.isTrue) {
+                    return null;
+                }
+            } else {
+                if (!settingsMap["tracker"+from].isTrue) {
+                    return null;
+                }
+            }
+            const container = document.querySelector(".BattlePanel_playersArea__vvwlB");
+            if (container && container.children.length > 0) {
+                const playersContainer = container.children[0];
+                const effectFrom = playersContainer.children[from];
+                const monsterContainer = document.querySelector(".BattlePanel_monstersArea__2dzrY").children[0];
+                const effectTo = toPlayer ? playersContainer.children[to] : monsterContainer.children[to];
+
+                const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker"+from];
+                let lineColor = "rgba("+trackerSetting.r+", "+trackerSetting.g+", "+trackerSetting.b+", 1)";
+                if (abilityHrid === 'heal') {
+                    lineColor = "rgba(93, 212, 93, 0.8)";
+                }
+
+                if (!reversed) {
+                    createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid);
+                } else {
+                    createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid);
+                }
+            }
+
+        }
+
+        // 启动动画
+        animate();
+    </script>
+</body>
+</html>

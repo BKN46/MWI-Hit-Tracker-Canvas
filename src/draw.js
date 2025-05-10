@@ -1,5 +1,5 @@
-import { projectileEffectsMap } from "./effects/projectile";
-import { onHitEffectsMap } from "./effects/hit";
+import { projectileEffectsMap } from "./effects/projectile.js";
+import { onHitEffectsMap } from "./effects/hit.js";
 
 const canvas = initTrackerCanvas();
 const ctx = canvas.getContext('2d');
