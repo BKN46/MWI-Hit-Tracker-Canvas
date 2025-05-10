@@ -1,5 +1,5 @@
 import { waitForSetttins, settingsMap } from "./setting.js";
-import { animate, createProjectile } from "./draw.js";
+import { animate, createProjectile, resetAllMonsterSvg } from "./draw.js";
 
 // #region Setting
 waitForSetttins();
@@ -43,6 +43,7 @@ function handleMessage(message) {
         monstersMP = obj.monsters.map((monster) => monster.currentManapoints);
         playersHP = obj.players.map((player) => player.currentHitpoints);
         playersMP = obj.players.map((player) => player.currentManapoints);
+        resetAllMonsterSvg();
     } else if (obj && obj.type === "battle_updated" && monstersHP.length) {
         const mMap = obj.mMap;
         const pMap = obj.pMap;
@@ -78,6 +79,7 @@ function handleMessage(message) {
                 monstersHP[mIndex] = monster.cHP;
                 if (hpDiff > 0 && playerIndices.length > 0) {
                     const isCrit = monster.dmgCounter == monster.critCounter;
+                    const isKill = monster.cHP <= 0;
                     if (playerIndices.length > 1) {
                         playerIndices.forEach((userIndex) => {
                             if(userIndex === castPlayer) {
@@ -89,6 +91,7 @@ function handleMessage(message) {
                                     abilityHrid: playersAbility[userIndex],
                                     toPlayer: false,
                                     isCrit: isCrit,
+                                    isKill: isKill,
                                 });
                             }
                         });
@@ -101,6 +104,7 @@ function handleMessage(message) {
                             abilityHrid: playersAbility[playerIndices[0]],
                             toPlayer: false,
                             isCrit: isCrit,
+                            isKill: isKill,
                         });
                     }
                 }
@@ -220,6 +224,7 @@ function registProjectile({
     abilityHrid = "default",
     toPlayer = true,
     isCrit = false,
+    isKill = false,
 }) {
     if (reversed){
         if (!settingsMap.tracker6.isTrue) {
@@ -245,9 +250,9 @@ function registProjectile({
         let lineColor = "rgba("+trackerSetting.r+", "+trackerSetting.g+", "+trackerSetting.b+", 1)";
 
         if (!reversed) {
-            createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid, isCrit);
+            createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid, isCrit, isKill);
         } else {
-            createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid, isCrit);
+            createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid, isCrit, isKill);
         }
     }
 

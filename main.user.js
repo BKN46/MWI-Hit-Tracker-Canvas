@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.0.3
+// @version        1.0.4
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1475,6 +1475,11 @@
 	    desc: isZH ? "显示玩家被动回复效果" : "Show Self Regeneration",
 	    value: true
 	  },
+	  monsterDeadAnimation: {
+	    id: "monsterDeadAnimation",
+	    desc: isZH ? "怪物死亡效果" : "Monster Dead Animation",
+	    value: true
+	  },
 	  damageHpBarDropDelay: {
 	    id: "damageHpBarDropDelay",
 	    desc: isZH ? "血条掉落延迟" : "Hp Bar Drop Delay",
@@ -2156,6 +2161,51 @@
 	        }
 	      });
 	    }
+	  },
+	  "star": {
+	    x: p => p.x + (Math.random() - 0.5) * 60,
+	    y: p => p.y + (Math.random() - 0.5) * 10,
+	    angle: p => Math.random() * Math.PI * 2,
+	    size: p => (Math.random() * 6 + 2) * p.size,
+	    life: p => 1200 * Math.sqrt(p.size),
+	    speed: p => (Math.random() * 6 + 2) * Math.sqrt(p.size),
+	    gravity: p => -0.1,
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.y -= 5 * p.size;
+	      }
+	      p.speed *= 0.97; // 慢慢减速
+	      p.x += Math.cos(p.angle) * p.speed;
+	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
+	      p.life -= 3;
+	      if (p.life > 0) {
+	        const alpha = Math.max(0, Math.min(1, p.life / 1200));
+	        ctx.save();
+	        ctx.translate(p.x, p.y);
+	        ctx.rotate(p.angle);
+	        const starSize = p.size * 10;
+	        ctx.beginPath();
+	        const startAngle = -Math.PI / 2;
+	        const startX = Math.cos(startAngle) * starSize;
+	        const startY = Math.sin(startAngle) * starSize;
+	        ctx.moveTo(startX, startY);
+	        for (let i = 0; i < 5; i++) {
+	          const outerAngle = i * 2 * Math.PI / 5 - Math.PI / 2;
+	          const innerAngle = outerAngle + Math.PI / 5;
+	          const outerX = Math.cos(outerAngle) * starSize;
+	          const outerY = Math.sin(outerAngle) * starSize;
+	          ctx.lineTo(outerX, outerY);
+	          const innerX = Math.cos(innerAngle) * (starSize / 2);
+	          const innerY = Math.sin(innerAngle) * (starSize / 2);
+	          ctx.lineTo(innerX, innerY);
+	        }
+	        ctx.closePath();
+	        ctx.fillStyle = p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+	        ctx.fill();
+	        ctx.restore();
+	      }
+	    }
 	  }
 	};
 
@@ -2188,6 +2238,9 @@
 	      "ember": size => Math.min(Math.ceil(size * 10), 40),
 	      "shockwave": size => Math.min(Math.ceil(size), 4),
 	      "smallParticle": size => Math.min(Math.ceil(size * 4), 10)
+	    },
+	    onCrit: {
+	      "star": size => Math.min(Math.ceil(size * 10), 20)
 	    },
 	    draw: (ctx, p) => {
 	      ctx.beginPath();
@@ -2346,6 +2399,20 @@
 	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
 	    },
 	    draw: (ctx, p) => {}
+	  },
+	  'debug': {
+	    speedFactor: 1,
+	    trailLength: 35,
+	    shake: true,
+	    onHit: {
+	      "star": size => Math.min(Math.ceil(size * 10), 20)
+	    },
+	    draw: (ctx, p) => {
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+	    }
 	  }
 	};
 
@@ -2481,6 +2548,32 @@
 	    hpBarBack.remove();
 	  }, dropDelay + 500);
 	}
+	function resetAllMonsterSvg() {
+	  const monsterArea = document.querySelector(".BattlePanel_monstersArea__2dzrY");
+	  if (monsterArea) {
+	    const monsterSvgs = monsterArea.querySelectorAll(".Icon_icon__2LtL_");
+	    monsterSvgs.forEach(monsterSvg => {
+	      monsterSvg.style.transition = "none";
+	      monsterSvg.style.transform = "rotate(0deg)";
+	      monsterSvg.style.opacity = "1";
+	    });
+	  }
+	}
+	function applyDeadEffect(element) {
+	  const monsterSvg = element.querySelector(".Icon_icon__2LtL_");
+	  monsterSvg.style.transition = "transform 0.1s ease-in-out";
+	  monsterSvg.style.transformOrigin = "bottom center";
+	  monsterSvg.style.transform = "rotate(15deg)";
+	  setTimeout(() => {
+	    monsterSvg.style.transition = "transform 0.5s ease-in-out, opacity 0.5s ease-in-out";
+	    monsterSvg.style.transform = "rotate(-180deg)";
+	    monsterSvg.style.opacity = "0";
+	  }, 300);
+	  // fade out
+	  // setTimeout(() => {
+	  //     monsterSvg.style.transition = "opacity 0.5s ease-in-out";
+	  // }, 800);
+	}
 
 	// 更新和渲染所有命中效果
 	function updateOnHits() {
@@ -2520,7 +2613,8 @@
 	      ctx.lineWidth = 6;
 	      ctx.strokeText(damageText, textPosition.x, textPosition.y);
 	      // main
-	      ctx.fillStyle = 'white';
+	      const fillColor = effect.otherInfo.isCrit ? 'rgba(255, 213, 89, 1)' : 'white';
+	      ctx.fillStyle = fillColor;
 	      ctx.fillText(damageText, textPosition.x, textPosition.y);
 	    }
 	    ctx.restore();
@@ -2707,7 +2801,14 @@
 	  const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
 	  const fpsFactor = Math.min(Math.max(160 / fps, 0.125), 8);
 	  const effects = [];
-	  const onHitEffect = projectile.effect.onHit;
+	  let onHitEffect = projectile.effect.onHit;
+	  if (projectile.otherInfo.isCrit) {
+	    const onCrit = projectile.effect.onCrit || projectileEffectsMap.fireball.onCrit;
+	    onHitEffect = {
+	      ...onHitEffect,
+	      ...onCrit
+	    };
+	  }
 	  for (const effectName in onHitEffect) {
 	    const effect = onHitEffectsMap[effectName];
 	    if (!effect) continue;
@@ -2744,7 +2845,7 @@
 	  };
 	  activeOnHitAnimation.push(onHitEffectData);
 	}
-	function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200, projectileType = 'default') {
+	function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200, projectileType = 'default', isCrit = false, isKill = false) {
 	  if (!startElement || !endElement) {
 	    return;
 	  }
@@ -2770,12 +2871,17 @@
 	    end: end,
 	    damage: damage,
 	    color: color,
+	    isCrit: isCrit,
+	    isKill: isKill,
 	    startElement: startElement,
 	    endElement: endElement
 	  };
 	  if (projectiles.length <= projectileLimit) {
 	    if (damage > 0) {
 	      addDamageHPBar(endElement, damage);
+	    }
+	    if (otherInfo.isKill && settingsMap.monsterDeadAnimation.value) {
+	      applyDeadEffect(otherInfo.endElement);
 	    }
 	    const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
 	    projectiles.push(projectile);
@@ -2835,6 +2941,7 @@
 	    monstersMP = obj.monsters.map(monster => monster.currentManapoints);
 	    playersHP = obj.players.map(player => player.currentHitpoints);
 	    playersMP = obj.players.map(player => player.currentManapoints);
+	    resetAllMonsterSvg();
 	  } else if (obj && obj.type === "battle_updated" && monstersHP.length) {
 	    const mMap = obj.mMap;
 	    const pMap = obj.pMap;
@@ -2853,7 +2960,14 @@
 	        castPlayer = userIndex;
 	      }
 	      if (pMap[userIndex].cMP > playersMP[userIndex]) {
-	        registProjectile(userIndex, userIndex, pMap[userIndex].cMP - playersMP[userIndex], false, 'selfManaRegen', true);
+	        registProjectile({
+	          from: userIndex,
+	          to: userIndex,
+	          hpDiff: pMap[userIndex].cMP - playersMP[userIndex],
+	          reversed: false,
+	          abilityHrid: 'selfManaRegen',
+	          toPlayer: true
+	        });
 	      }
 	      playersMP[userIndex] = pMap[userIndex].cMP;
 	      if (pMap[userIndex].abilityHrid) {
@@ -2866,14 +2980,34 @@
 	        const hpDiff = mHP - monster.cHP;
 	        monstersHP[mIndex] = monster.cHP;
 	        if (hpDiff > 0 && playerIndices.length > 0) {
+	          const isCrit = monster.dmgCounter == monster.critCounter;
+	          const isKill = monster.cHP <= 0;
 	          if (playerIndices.length > 1) {
 	            playerIndices.forEach(userIndex => {
 	              if (userIndex === castPlayer) {
-	                registProjectile(userIndex, mIndex, hpDiff, false, playersAbility[userIndex]);
+	                registProjectile({
+	                  from: userIndex,
+	                  to: mIndex,
+	                  hpDiff: hpDiff,
+	                  reversed: false,
+	                  abilityHrid: playersAbility[userIndex],
+	                  toPlayer: false,
+	                  isCrit: isCrit,
+	                  isKill: isKill
+	                });
 	              }
 	            });
 	          } else {
-	            registProjectile(playerIndices[0], mIndex, hpDiff, false, playersAbility[playerIndices[0]]);
+	            registProjectile({
+	              from: playerIndices[0],
+	              to: mIndex,
+	              hpDiff: hpDiff,
+	              reversed: false,
+	              abilityHrid: playersAbility[playerIndices[0]],
+	              toPlayer: false,
+	              isCrit: isCrit,
+	              isKill: isKill
+	            });
 	          }
 	        }
 	      }
@@ -2884,20 +3018,51 @@
 	        const hpDiff = pHP - player.cHP;
 	        playersHP[pIndex] = player.cHP;
 	        if (hpDiff > 0 && monsterIndices.length > 0) {
+	          const isCrit = player.dmgCounter == player.critCounter;
 	          if (monsterIndices.length > 1) {
 	            monsterIndices.forEach(monsterIndex => {
 	              if (monsterIndex === castMonster) {
-	                registProjectile(pIndex, monsterIndex, hpDiff, true, 'autoAttack');
+	                registProjectile({
+	                  from: pIndex,
+	                  to: monsterIndex,
+	                  hpDiff: hpDiff,
+	                  reversed: true,
+	                  abilityHrid: 'autoAttack',
+	                  toPlayer: false,
+	                  isCrit: isCrit
+	                });
 	              }
 	            });
 	          } else {
-	            registProjectile(pIndex, monsterIndices[0], hpDiff, true, 'autoAttack');
+	            registProjectile({
+	              from: pIndex,
+	              to: monsterIndices[0],
+	              hpDiff: hpDiff,
+	              reversed: true,
+	              abilityHrid: 'autoAttack',
+	              toPlayer: false,
+	              isCrit: isCrit
+	            });
 	          }
 	        } else if (hpDiff < 0) {
 	          if (castPlayer > -1) {
-	            registProjectile(castPlayer, pIndex, -hpDiff, false, 'heal', true);
+	            registProjectile({
+	              from: castPlayer,
+	              to: pIndex,
+	              hpDiff: -hpDiff,
+	              reversed: false,
+	              abilityHrid: 'heal',
+	              toPlayer: true
+	            });
 	          } else {
-	            registProjectile(pIndex, pIndex, -hpDiff, false, 'selfHeal', true);
+	            registProjectile({
+	              from: pIndex,
+	              to: pIndex,
+	              hpDiff: -hpDiff,
+	              reversed: false,
+	              abilityHrid: 'selfHeal',
+	              toPlayer: true
+	            });
 	          }
 	        }
 	      }
@@ -2916,7 +3081,14 @@
 	        const hpDiff = pHP - player.cHP;
 	        playersHP[pIndex] = player.cHP;
 	        if (hpDiff < 0) {
-	          registProjectile(pIndex, pIndex, -hpDiff, false, 'selfHeal', true);
+	          registProjectile({
+	            from: pIndex,
+	            to: pIndex,
+	            hpDiff: -hpDiff,
+	            reversed: false,
+	            abilityHrid: 'selfHeal',
+	            toPlayer: true
+	          });
 	        }
 	      }
 	    });
@@ -2926,7 +3098,14 @@
 	        const mpDiff = pMP - player.pMP;
 	        playersMP[pIndex] = player.pMP;
 	        if (mpDiff < 0) {
-	          registProjectile(pIndex, pIndex, -mpDiff, false, 'selfManaRegen', true);
+	          registProjectile({
+	            from: pIndex,
+	            to: pIndex,
+	            hpDiff: -mpDiff,
+	            reversed: false,
+	            abilityHrid: 'selfManaRegen',
+	            toPlayer: true
+	          });
 	        }
 	      }
 	    });
@@ -2937,7 +3116,16 @@
 	// #region Main Logic
 
 	// 动画效果
-	function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'default', toPlayer = false) {
+	function registProjectile({
+	  from,
+	  to,
+	  hpDiff,
+	  reversed = false,
+	  abilityHrid = "default",
+	  toPlayer = true,
+	  isCrit = false,
+	  isKill = false
+	}) {
 	  if (reversed) {
 	    if (!settingsMap.tracker6.isTrue) {
 	      return null;
@@ -2959,9 +3147,9 @@
 	    const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker" + from];
 	    let lineColor = "rgba(" + trackerSetting.r + ", " + trackerSetting.g + ", " + trackerSetting.b + ", 1)";
 	    if (!reversed) {
-	      createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid);
+	      createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid, isCrit, isKill);
 	    } else {
-	      createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid);
+	      createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid, isCrit, isKill);
 	    }
 	  }
 	}

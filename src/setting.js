@@ -124,6 +124,11 @@ export let settingsMap = {
         desc: isZH ? "显示玩家被动回复效果":"Show Self Regeneration",
         value: true,
     },
+    monsterDeadAnimation: {
+        id: "monsterDeadAnimation",
+        desc: isZH ? "怪物死亡效果":"Monster Dead Animation",
+        value: true,
+    },
     damageHpBarDropDelay: {
         id: "damageHpBarDropDelay",
         desc: isZH ? "血条掉落延迟":"Hp Bar Drop Delay",

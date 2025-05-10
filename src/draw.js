@@ -109,6 +109,34 @@ function addDamageHPBar(element, damage) {
     }, dropDelay + 500);
 }
 
+export function resetAllMonsterSvg() {
+    const monsterArea = document.querySelector(".BattlePanel_monstersArea__2dzrY");
+    if (monsterArea){
+        const monsterSvgs = monsterArea.querySelectorAll(".Icon_icon__2LtL_");
+        monsterSvgs.forEach((monsterSvg) => {
+            monsterSvg.style.transition = "none";
+            monsterSvg.style.transform = "rotate(0deg)";
+            monsterSvg.style.opacity = "1";
+        });
+    }
+}
+
+function applyDeadEffect(element) {
+    const monsterSvg = element.querySelector(".Icon_icon__2LtL_");
+    monsterSvg.style.transition = "transform 0.1s ease-in-out";
+    monsterSvg.style.transformOrigin = "bottom center";
+    monsterSvg.style.transform = "rotate(15deg)";
+    setTimeout(() => {
+        monsterSvg.style.transition = "transform 0.5s ease-in-out, opacity 0.5s ease-in-out";
+        monsterSvg.style.transform = "rotate(-180deg)";
+        monsterSvg.style.opacity = "0";
+    }, 300);
+    // fade out
+    // setTimeout(() => {
+    //     monsterSvg.style.transition = "opacity 0.5s ease-in-out";
+    // }, 800);
+}
+
 // 更新和渲染所有命中效果
 function updateOnHits() {
     // 遍历所有活跃的命中
@@ -159,7 +187,6 @@ function updateOnHits() {
         ctx.restore();
     }
 }
-
 
 let fpsStatTime = new Date().getTime();
 let fpsQueue = [];
@@ -400,7 +427,7 @@ function createOnHitEffect(projectile) {
     activeOnHitAnimation.push(onHitEffectData);
 }
 
-export function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200, projectileType = 'default', isCrit = false) {
+export function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200, projectileType = 'default', isCrit = false, isKill = false) {
     if (!startElement || !endElement) {
         return;
     }
@@ -431,12 +458,16 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         damage: damage,
         color: color,
         isCrit: isCrit,
+        isKill: isKill,
         startElement: startElement,
         endElement: endElement,
     }
     if (projectiles.length <= projectileLimit) {
         if (damage > 0) {
             addDamageHPBar(endElement, damage);
+        }
+        if (otherInfo.isKill && settingsMap.monsterDeadAnimation.value) {
+            applyDeadEffect(otherInfo.endElement);
         }
         const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
         projectiles.push(projectile);
