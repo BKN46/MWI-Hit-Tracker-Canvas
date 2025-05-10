@@ -159,8 +159,8 @@ export const projectileEffectsMap = {
         }
     },
     'range': {
-        speedFactor: 1.5,
-        gravity: 0.2,
+        speedFactor: 1.7,
+        gravity: 0.1,
         trailLength: 30,
         shake: true,
         onHit: {
@@ -168,20 +168,73 @@ export const projectileEffectsMap = {
             "slashParticle": (size) => Math.min(Math.ceil(size * 8), 20),
         },
         draw: (ctx, p) => {
+            const length = p.size * 5;
+            const width = p.size * 0.35;
+            const arrowHeadLength = p.size * 1;
+            const arrowHeadWidth = p.size * 0.60;
+            const fletchingLength = p.size * 1.6;
+            const fletchingWidth = p.size * 1.0;
+            
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(Math.atan2(p.velocity.y, p.velocity.x));
+            
+            // Draw arrow shaft
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.moveTo(-length/2, -width/2);
+            ctx.lineTo(length/2 - arrowHeadLength, -width/2);
+            ctx.lineTo(length/2 - arrowHeadLength, width/2);
+            ctx.lineTo(-length/2, width/2);
+            ctx.closePath();
             ctx.fillStyle = p.color;
             ctx.fill();
+            
+            // Draw arrow head
+            ctx.beginPath();
+            ctx.moveTo(length/3 - arrowHeadLength, -arrowHeadWidth/2);
+            ctx.lineTo(length/2, 0);
+            ctx.lineTo(length/3 - arrowHeadLength, arrowHeadWidth/2);
+            ctx.closePath();
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            
+            // Draw fletchings (simplified for 2D)
+            ctx.beginPath();
+            ctx.moveTo(-length/2, -width/2);
+            ctx.lineTo(-length/2 - fletchingLength, -fletchingWidth/2);
+            ctx.lineTo(-length/2 - fletchingLength * 0.5, 0);
+            ctx.lineTo(-length/2 - fletchingLength, fletchingWidth/2);
+            ctx.lineTo(-length/2, width/2);
+            ctx.closePath();
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            
+            ctx.restore();
         },
-        glow: (ctx, p) => {
-            const gradient = ctx.createRadialGradient(
-                p.x, p.y, 0, 
-                p.x, p.y, p.size*2
-            );
-            gradient.addColorStop(0, `${p.color}`);
-            gradient.addColorStop(1, `${p.color}`);
-            ctx.fillStyle = gradient;
-        }
+        trail: (ctx, p, i) => {
+            // Only show trail after the arrow has traveled some distance
+            const startDelay = 5; // Number of frames to wait before showing trail
+            if (i < startDelay) return;
+            
+            const trailLength = p.size * 15;
+            const trailWidth = p.size * 0.2;
+            
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(Math.atan2(p.vY, p.vX));
+            
+            // Draw simple line trail behind the arrow
+            ctx.beginPath();
+            ctx.moveTo(-trailLength/2, -trailWidth/2);
+            ctx.lineTo(0, -trailWidth/2);  // Only draw up to the arrow's position
+            ctx.lineTo(0, trailWidth/2);
+            ctx.lineTo(-trailLength/2, trailWidth/2);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';  // Fixed low opacity white
+            ctx.fill();
+            
+            ctx.restore();
+        },
     },
     'selfHeal': {
         speedFactor: 10,
