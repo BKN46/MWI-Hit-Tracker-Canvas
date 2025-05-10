@@ -35,7 +35,9 @@ function applyShakeEffect(element, intensity = 1, duration = 500) {
     // Store the element's original position/transform
     const originalTransform = element.style.transform || '';
     const originalTransition = element.style.transition || '';
-    
+
+    intensity *= settingsMap.shakeEffectScale.value || 1;
+
     // Scale intensity based on size/damage
     const scaledIntensity = Math.min(10, intensity);
     
@@ -207,7 +209,10 @@ class Projectile {
 
         // 运动参数 - 向斜上方抛物线轨迹
         this.gravity = this.effect.gravity || 0.2; // 重力加速度
+        this.gravity *= settingsMap.projectileHeightScale.value || 1; // 高度缩放因子
+
         this.initialSpeed = initialSpeed * (this.effect.speedFactor || 1); // 初始速度参数
+        this.initialSpeed *= settingsMap.projectileSpeedScale.value || 1; // 速度缩放因子
 
         // 计算水平距离和高度差
         const dx = endX - startX;
@@ -238,6 +243,7 @@ class Projectile {
         // 拖尾效果
         this.trail = [];
         this.maxTrailLength = Math.floor((this.effect.trailLength || 50) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
+        this.maxTrailLength *= settingsMap.projectileTrailLength.value || 1; // 拖尾缩放因子
     }
 
     update() {
@@ -312,6 +318,10 @@ function createOnHitEffect(projectile) {
     const sizeScale = Math.max(1, Math.min(100, size)) / 20;
     projectile.size = sizeScale;
 
+    const sizeFactor = settingsMap.onHitScale.value || 1;
+    const particleFactor = settingsMap.particleEffectRatio.value || 1;
+    const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
+
     const effects = [];
 
     const onHitEffect = projectile.effect.onHit;
@@ -319,17 +329,20 @@ function createOnHitEffect(projectile) {
         const effect = onHitEffectsMap[effectName];
         if (!effect) continue;
 
-        const effectCount = onHitEffect[effectName](projectile.size);
+        const effectCount = Math.ceil(onHitEffect[effectName](projectile.size) * particleFactor);
         for (let i = 0; i < effectCount; i++) {
+            const effectSize = (effect.size ? effect.size(projectile) : Math.random() * 10 + 5) * sizeFactor;
+            const effectLife = (effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor;
+
             effects.push({
                 x: effect.x ? effect.x(projectile) : x, 
                 y: effect.y ? effect.y(projectile) : y,
                 angle: effect.angle ? effect.angle(projectile) : Math.random() * Math.PI * 2,
                 alpha: effect.alpha ? effect.alpha(projectile) : 0.8,
-                size: effect.size ? effect.size(projectile) : Math.random() * 10 + 5,
+                size: effectSize,
                 speed: effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2,
                 gravity: effect.gravity ? effect.gravity(projectile) : 0,
-                life: effect.life ? effect.life(projectile) : 1000,
+                life: effectLife,
                 color: effect.color ? effect.color(projectile) : projectile.color,
                 draw: effect.draw ? effect.draw : (ctx, p) => {},
             });
@@ -354,11 +367,13 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         return;
     }
     const combatUnitContainer = endElement.querySelector(".CombatUnit_splatsContainer__2xcc0");
-    combatUnitContainer.style.visibility = "hidden";
+    if (!settingsMap.originalDamageDisplay.value) {
+        combatUnitContainer.style.visibility = "hidden";
+    }
     const padding = 30;
     const randomRange = {
         x: Math.floor((Math.random() - 0.5) * (combatUnitContainer.offsetWidth - 2 * padding)),
-        y: Math.floor((Math.random()) * (combatUnitContainer.offsetHeight - padding)),
+        y: Math.floor((Math.random() - 0.1) * (combatUnitContainer.offsetHeight - padding)),
     }
 
     const projectileLimit = 30;

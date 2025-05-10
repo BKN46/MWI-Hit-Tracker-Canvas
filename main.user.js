@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        0.9.4
+// @version        0.9.5
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1353,9 +1353,78 @@
 	let isZH = isZHInGameSetting; // MWITools 本身显示的语言默认由游戏内设置语言决定
 
 	let settingsMap = {
+	  projectileScale: {
+	    id: "projectileScale",
+	    desc: isZH ? "投射物缩放" : "Projectile Scale",
+	    value: 1.0,
+	    min: 0.1,
+	    max: 3.0,
+	    step: 0.01
+	  },
+	  onHitScale: {
+	    id: "onHitScale",
+	    desc: isZH ? "命中效果缩放" : "On-hit Effect Scale",
+	    value: 1.0,
+	    min: 0.1,
+	    max: 3.0,
+	    step: 0.01
+	  },
+	  projectileHeightScale: {
+	    id: "projectileHeightScale",
+	    desc: isZH ? "弹道高度比例" : "Projectile Height Scale",
+	    value: 1.0,
+	    min: 0.1,
+	    max: 3.0,
+	    step: 0.01
+	  },
+	  projectileSpeedScale: {
+	    id: "projectileSpeedScale",
+	    desc: isZH ? "弹道速度比例" : "Projectile Speed Scale",
+	    value: 1.0,
+	    min: 0.1,
+	    max: 3.0,
+	    step: 0.01
+	  },
+	  shakeEffectScale: {
+	    id: "shakeEffectScale",
+	    desc: isZH ? "震动效果" : "Shake Effect Scale",
+	    value: 1.0,
+	    min: 0.0,
+	    max: 3.0,
+	    step: 0.01
+	  },
+	  particleEffectRatio: {
+	    id: "particleEffectRatio",
+	    desc: isZH ? "粒子效果数量" : "Particle Effect Ratio",
+	    value: 1.0,
+	    min: 0.0,
+	    max: 5.0,
+	    step: 0.1
+	  },
+	  particleLifespanRatio: {
+	    id: "particleLifespanRatio",
+	    desc: isZH ? "粒子效果持续时长" : "Particle Lifespan Ratio",
+	    value: 1.0,
+	    min: 0.1,
+	    max: 5.0,
+	    step: 0.1
+	  },
+	  projectileTrailLength: {
+	    id: "projectileTrailLength",
+	    desc: isZH ? "弹道尾迹长度" : "Projectile Trail Length",
+	    value: 1.0,
+	    min: 0.0,
+	    max: 5.0,
+	    step: 0.01
+	  },
+	  originalDamageDisplay: {
+	    id: "originalDamageDisplay",
+	    desc: isZH ? "原版伤害显示" : "Original Damage Display",
+	    value: false
+	  },
 	  tracker0: {
 	    id: "tracker0",
-	    desc: isZH ? "玩家 #1" : "player #1",
+	    desc: isZH ? "玩家颜色 #1" : "Player Color1",
 	    isTrue: true,
 	    r: 255,
 	    g: 99,
@@ -1363,7 +1432,7 @@
 	  },
 	  tracker1: {
 	    id: "tracker1",
-	    desc: isZH ? "玩家 #2" : "player #2",
+	    desc: isZH ? "玩家颜色 #2" : "Player Color2",
 	    isTrue: true,
 	    r: 54,
 	    g: 162,
@@ -1371,7 +1440,7 @@
 	  },
 	  tracker2: {
 	    id: "tracker2",
-	    desc: isZH ? "玩家 #3" : "player #3",
+	    desc: isZH ? "玩家颜色 #3" : "Player Color3",
 	    isTrue: true,
 	    r: 255,
 	    g: 206,
@@ -1379,7 +1448,7 @@
 	  },
 	  tracker3: {
 	    id: "tracker3",
-	    desc: isZH ? "玩家 #4" : "player #4",
+	    desc: isZH ? "玩家颜色 #4" : "Player Color4",
 	    isTrue: true,
 	    r: 75,
 	    g: 192,
@@ -1387,7 +1456,7 @@
 	  },
 	  tracker4: {
 	    id: "tracker4",
-	    desc: isZH ? "玩家 #5" : "player #5",
+	    desc: isZH ? "玩家颜色 #5" : "Player Color5",
 	    isTrue: true,
 	    r: 153,
 	    g: 102,
@@ -1395,7 +1464,7 @@
 	  },
 	  tracker6: {
 	    id: "tracker6",
-	    desc: isZH ? "敌人" : "enemies",
+	    desc: isZH ? "敌人颜色" : "Enemies Color",
 	    isTrue: true,
 	    r: 255,
 	    g: 0,
@@ -1411,127 +1480,159 @@
 	      const insertElem = targetNode.querySelector("div#tracker_settings");
 	      insertElem.insertAdjacentHTML("beforeend", `<div style="float: left; color: orange">${isZH ? "MWI-Hit-Tracker 设置 ：" : "MWI-Hit-Tracker Settings: "}</div></br>`);
 	      for (const setting of Object.values(settingsMap)) {
-	        insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option"><input type="checkbox" id="${setting.id}" ${setting.isTrue ? "checked" : ""}></input>${setting.desc}<div class="color-preview" id="colorPreview_${setting.id}"></div></div>`);
-	        // 颜色自定义
-	        const colorPreview = document.getElementById('colorPreview_' + setting.id);
-	        let currentColor = {
-	          r: setting.r,
-	          g: setting.g,
-	          b: setting.b
-	        };
-
-	        // 点击打开颜色选择器
-	        colorPreview.addEventListener('click', () => {
-	          const settingColor = {
-	            r: settingsMap[setting.id].r,
-	            g: settingsMap[setting.id].g,
-	            b: settingsMap[setting.id].b
+	        if (setting.id.startsWith("tracker")) {
+	          insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option"><input type="checkbox" id="${setting.id}" ${setting.isTrue ? "checked" : ""}></input>${setting.desc}<div class="color-preview" id="colorPreview_${setting.id}"></div></div>`);
+	          const checkedBox = insertElem.querySelector("#" + setting.id);
+	          checkedBox.addEventListener("change", e => {
+	            settingsMap[setting.id].isTrue = e.target.checked;
+	            saveSettings();
+	          });
+	          const colorPreview = document.getElementById('colorPreview_' + setting.id);
+	          let currentColor = {
+	            r: setting.r,
+	            g: setting.g,
+	            b: setting.b
 	          };
-	          const modal = createColorPicker(settingColor, newColor => {
-	            currentColor = newColor;
-	            settingsMap[setting.id].r = newColor.r;
-	            settingsMap[setting.id].g = newColor.g;
-	            settingsMap[setting.id].b = newColor.b;
-	            localStorage.setItem("tracker_settingsMap", JSON.stringify(settingsMap));
-	            updatePreview();
+
+	          // 点击打开颜色选择器
+	          colorPreview.addEventListener('click', () => {
+	            const settingColor = {
+	              r: settingsMap[setting.id].r,
+	              g: settingsMap[setting.id].g,
+	              b: settingsMap[setting.id].b
+	            };
+	            const modal = createColorPicker(settingColor, newColor => {
+	              currentColor = newColor;
+	              settingsMap[setting.id].r = newColor.r;
+	              settingsMap[setting.id].g = newColor.g;
+	              settingsMap[setting.id].b = newColor.b;
+	              localStorage.setItem("tracker_settingsMap", JSON.stringify(settingsMap));
+	              updatePreview();
+	            });
+	            document.body.appendChild(modal);
 	          });
-	          document.body.appendChild(modal);
-	        });
-	        function updatePreview() {
-	          colorPreview.style.backgroundColor = `rgb(${currentColor.r},${currentColor.g},${currentColor.b})`;
-	        }
-	        updatePreview();
-	        function createColorPicker(initialColor, callback) {
-	          // 创建弹窗容器
-	          const backdrop = document.createElement('div');
-	          backdrop.className = 'modal-backdrop';
-	          const modal = document.createElement('div');
-	          modal.className = 'color-picker-modal';
+	          function updatePreview() {
+	            colorPreview.style.backgroundColor = `rgb(${currentColor.r},${currentColor.g},${currentColor.b})`;
+	          }
+	          updatePreview();
+	          function createColorPicker(initialColor, callback) {
+	            // 创建弹窗容器
+	            const backdrop = document.createElement('div');
+	            backdrop.className = 'modal-backdrop';
+	            const modal = document.createElement('div');
+	            modal.className = 'color-picker-modal';
 
-	          // 颜色预览
-	          //const preview = document.createElement('div');
-	          //preview.className = 'color-preview';
-	          //preview.style.height = '100px';
-	          // 创建SVG容器
-	          const preview = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-	          preview.setAttribute("width", "200");
-	          preview.setAttribute("height", "150");
-	          preview.style.display = 'block';
-	          // 创建抛物线路径
-	          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-	          Object.assign(path.style, {
-	            strokeWidth: '5px',
-	            fill: 'none',
-	            strokeLinecap: 'round'
-	          });
-	          path.setAttribute("d", "M 0 130 Q 100 0 200 130");
-	          preview.appendChild(path);
+	            // 创建SVG容器
+	            const preview = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	            preview.setAttribute("width", "200");
+	            preview.setAttribute("height", "150");
+	            preview.style.display = 'block';
+	            // 创建抛物线路径
+	            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+	            Object.assign(path.style, {
+	              strokeWidth: '5px',
+	              fill: 'none',
+	              strokeLinecap: 'round'
+	            });
+	            path.setAttribute("d", "M 0 130 Q 100 0 200 130");
+	            preview.appendChild(path);
 
-	          // 颜色控制组件
-	          const controls = document.createElement('div');
-	          ['r', 'g', 'b'].forEach(channel => {
-	            const container = document.createElement('div');
-	            container.className = 'slider-container';
+	            // 颜色控制组件
+	            const controls = document.createElement('div');
+	            ['r', 'g', 'b'].forEach(channel => {
+	              const container = document.createElement('div');
+	              container.className = 'slider-container';
 
-	            // 标签
-	            const label = document.createElement('label');
-	            label.textContent = channel.toUpperCase() + ':';
-	            label.style.color = "white";
+	              // 标签
+	              const label = document.createElement('label');
+	              label.textContent = channel.toUpperCase() + ':';
+	              label.style.color = "white";
 
-	            // 滑块
-	            const slider = document.createElement('input');
-	            slider.type = 'range';
-	            slider.min = 0;
-	            slider.max = 255;
-	            slider.value = initialColor[channel];
+	              // 滑块
+	              const slider = document.createElement('input');
+	              slider.type = 'range';
+	              slider.min = 0;
+	              slider.max = 255;
+	              slider.value = initialColor[channel];
 
-	            // 输入框
-	            const input = document.createElement('input');
-	            input.type = 'number';
-	            input.min = 0;
-	            input.max = 255;
-	            input.value = initialColor[channel];
-	            input.style.width = '60px';
+	              // 输入框
+	              const input = document.createElement('input');
+	              input.type = 'number';
+	              input.min = 0;
+	              input.max = 255;
+	              input.value = initialColor[channel];
+	              input.style.width = '60px';
 
-	            // 双向绑定
+	              // 双向绑定
+	              const updateChannel = value => {
+	                value = Math.min(255, Math.max(0, parseInt(value) || 0));
+	                slider.value = value;
+	                input.value = value;
+	                currentColor[channel] = value;
+	                path.style.stroke = getColorString(currentColor);
+	              };
+	              slider.addEventListener('input', e => updateChannel(e.target.value));
+	              input.addEventListener('change', e => updateChannel(e.target.value));
+	              container.append(label, slider, input);
+	              controls.append(container);
+	            });
+
+	            // 操作按钮
+	            const actions = document.createElement('div');
+	            actions.className = 'modal-actions';
+	            const confirmBtn = document.createElement('button');
+	            confirmBtn.textContent = isZH ? '确定' : 'OK';
+	            confirmBtn.onclick = () => {
+	              callback(currentColor);
+	              backdrop.remove();
+	            };
+	            const cancelBtn = document.createElement('button');
+	            cancelBtn.textContent = isZH ? '取消' : 'Cancel';
+	            cancelBtn.onclick = () => backdrop.remove();
+	            actions.append(cancelBtn, confirmBtn);
+
+	            // 组装弹窗
+	            const getColorString = color => `rgb(${color.r},${color.g},${color.b})`;
+	            path.style.stroke = getColorString(settingsMap[setting.id]);
+	            modal.append(preview, controls, actions);
+	            backdrop.append(modal);
+
+	            // 点击背景关闭
+	            backdrop.addEventListener('click', e => {
+	              if (e.target === backdrop) backdrop.remove();
+	            });
+	            return backdrop;
+	          }
+	        } else {
+	          if (typeof setting.value === "boolean") {
+	            insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option">${setting.desc}<input type="checkbox" id="trackerSetting_${setting.id}"></input></div>`);
+	            const checkedBox = insertElem.querySelector("#trackerSetting_" + setting.id);
+	            checkedBox.checked = setting.value;
+	            checkedBox.addEventListener("change", e => {
+	              settingsMap[setting.id].value = e.target.checked;
+	              saveSettings();
+	            });
+	          } else if (typeof setting.value === "number") {
+	            insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option">${setting.desc}<input type="range" id="trackerSetting_${setting.id}_range"></input><input type="number" id="trackerSetting_${setting.id}_value"></input></div>`);
+	            const slider = document.querySelector("#trackerSetting_" + setting.id + "_range");
+	            slider.min = setting.min;
+	            slider.max = setting.max;
+	            slider.step = setting.step || 0.05;
+	            slider.value = setting.value;
+	            const input = document.querySelector("#trackerSetting_" + setting.id + "_value");
+	            input.min = setting.min;
+	            input.max = setting.max;
+	            input.step = setting.step || 0.05;
+	            input.value = setting.value;
 	            const updateChannel = value => {
-	              value = Math.min(255, Math.max(0, parseInt(value) || 0));
+	              value = Math.min(setting.max, Math.max(setting.min, parseFloat(value)));
 	              slider.value = value;
 	              input.value = value;
-	              currentColor[channel] = value;
-	              path.style.stroke = getColorString(currentColor);
+	              settingsMap[setting.id].value = value;
 	            };
 	            slider.addEventListener('input', e => updateChannel(e.target.value));
 	            input.addEventListener('change', e => updateChannel(e.target.value));
-	            container.append(label, slider, input);
-	            controls.append(container);
-	          });
-
-	          // 操作按钮
-	          const actions = document.createElement('div');
-	          actions.className = 'modal-actions';
-	          const confirmBtn = document.createElement('button');
-	          confirmBtn.textContent = isZH ? '确定' : 'OK';
-	          confirmBtn.onclick = () => {
-	            callback(currentColor);
-	            backdrop.remove();
-	          };
-	          const cancelBtn = document.createElement('button');
-	          cancelBtn.textContent = isZH ? '取消' : 'Cancel';
-	          cancelBtn.onclick = () => backdrop.remove();
-	          actions.append(cancelBtn, confirmBtn);
-
-	          // 组装弹窗
-	          const getColorString = color => `rgb(${color.r},${color.g},${color.b})`;
-	          path.style.stroke = getColorString(settingsMap[setting.id]);
-	          modal.append(preview, controls, actions);
-	          backdrop.append(modal);
-
-	          // 点击背景关闭
-	          backdrop.addEventListener('click', e => {
-	            if (e.target === backdrop) backdrop.remove();
-	          });
-	          return backdrop;
+	          }
 	        }
 	      }
 	      insertElem.addEventListener("change", saveSettings);
@@ -1540,21 +1641,22 @@
 	  setTimeout(waitForSetttins, 500);
 	}
 	function saveSettings() {
-	  for (const checkbox of document.querySelectorAll("div#tracker_settings input")) {
-	    settingsMap[checkbox.id].isTrue = checkbox.checked;
-	    localStorage.setItem("tracker_settingsMap", JSON.stringify(settingsMap));
-	  }
+	  localStorage.setItem("tracker_settingsMap", JSON.stringify(settingsMap));
 	}
 	function readSettings() {
 	  const ls = localStorage.getItem("tracker_settingsMap");
 	  if (ls) {
 	    const lsObj = JSON.parse(ls);
 	    for (const option of Object.values(lsObj)) {
-	      if (settingsMap.hasOwnProperty(option.id)) {
-	        settingsMap[option.id].isTrue = option.isTrue;
-	        settingsMap[option.id].r = option.r;
-	        settingsMap[option.id].g = option.g;
-	        settingsMap[option.id].b = option.b;
+	      if (option.id.startsWith("tracker")) {
+	        if (settingsMap.hasOwnProperty(option.id)) {
+	          settingsMap[option.id].isTrue = option.isTrue;
+	          settingsMap[option.id].r = option.r;
+	          settingsMap[option.id].g = option.g;
+	          settingsMap[option.id].b = option.b;
+	        }
+	      } else {
+	        settingsMap[option.id].value = option.value;
 	      }
 	    }
 	  }
@@ -1563,7 +1665,8 @@
 	style.textContent = `
     .tracker-option {
       display: flex;
-      align-items: center;
+      align-items: left;
+      gap: 10px;
     }
 
     .color-preview {
@@ -1650,6 +1753,26 @@
 	      ctx.fillStyle = gradient;
 	    }
 	  },
+	  'nature': {
+	    speedFactor: 1,
+	    trailLength: 35,
+	    shake: true,
+	    onHit: {
+	      "leaf": size => Math.min(Math.ceil(size * 8), 16)
+	    },
+	    draw: (ctx, p) => {
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+	    },
+	    glow: (ctx, p) => {
+	      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+	      gradient.addColorStop(0, `${p.color}`);
+	      gradient.addColorStop(1, `${p.color}`);
+	      ctx.fillStyle = gradient;
+	    }
+	  },
 	  'heal': {
 	    trailLength: 60,
 	    shake: false,
@@ -1669,7 +1792,7 @@
 	    trailLength: 0,
 	    gravity: 0,
 	    shake: false,
-	    color: 'rgba(0, 255, 0, 0.5)',
+	    color: 'rgba(0, 255, 0, 0.8)',
 	    onHit: {
 	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
 	    },
@@ -1680,7 +1803,7 @@
 	    trailLength: 0,
 	    gravity: 0,
 	    shake: false,
-	    color: 'rgba(68, 120, 241, 0.69)',
+	    color: 'rgba(68, 120, 241, 0.8)',
 	    onHit: {
 	      "holyCross": size => Math.min(Math.ceil(size * 12), 10)
 	    },
@@ -1692,20 +1815,41 @@
 	  "smoke": {
 	    angle: p => Math.random() * Math.PI * 2,
 	    alpha: p => 0.7,
-	    speed: p => (Math.random() * 1 + 0.2) * Math.sqrt(p.size),
-	    size: p => (Math.random() * 15 + 8) * p.size,
-	    life: p => 2000 * Math.sqrt(p.size),
-	    gravity: p => -1 * Math.sqrt(p.size),
+	    speed: p => (Math.random() * 0.2 + 0.1) * Math.sqrt(p.size),
+	    size: p => (Math.random() * 20 + 10) * p.size,
+	    life: p => 4000 * Math.sqrt(p.size),
+	    gravity: p => -0.2 * Math.sqrt(p.size),
 	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.y -= 5 * p.size;
+	        p.sizeVariation = Math.random() * 0.2 + 0.9; // Size variation for billowing effect
+	        p.rotationSpeed = (Math.random() - 0.5) * 0.02; // Slow rotation
+	        p.rotation = Math.random() * Math.PI * 2;
+	      }
+	      p.speed *= 0.995; // Slower deceleration
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
-	      p.life -= 2;
-	      p.alpha = Math.max(0, p.alpha - 0.003);
+	      p.life -= 1;
+	      p.alpha = Math.max(0, p.alpha - 0.001);
+	      p.rotation += p.rotationSpeed;
 	      if (p.life > 0) {
+	        ctx.save();
+	        ctx.translate(p.x, p.y);
+	        ctx.rotate(p.rotation);
+
+	        // Draw main smoke puff
 	        ctx.beginPath();
-	        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-	        ctx.fillStyle = `rgba(80, 80, 80, ${p.alpha * (p.life / 1200)})`;
+	        ctx.ellipse(0, 0, p.size * p.sizeVariation, p.size, 0, 0, Math.PI * 2);
+	        ctx.fillStyle = `rgba(80, 80, 80, ${p.alpha * (p.life / 2000)})`;
 	        ctx.fill();
+
+	        // Add some variation to the smoke puff
+	        ctx.beginPath();
+	        ctx.ellipse(p.size * 0.3, -p.size * 0.2, p.size * 0.6, p.size * 0.8, 0, 0, Math.PI * 2);
+	        ctx.fillStyle = `rgba(80, 80, 80, ${p.alpha * 0.7 * (p.life / 2000)})`;
+	        ctx.fill();
+	        ctx.restore();
 	      }
 	    }
 	  },
@@ -1739,11 +1883,11 @@
 	    }
 	  },
 	  "shockwave": {
-	    size: p => 7 * p.size,
+	    size: p => 10 * p.size,
 	    life: p => 800 * Math.sqrt(p.size),
 	    draw: (ctx, p) => {
 	      if (!p.maxSize) {
-	        p.maxSize = p.size * (100 + Math.random() * 100) / 7;
+	        p.maxSize = p.size * (150 + Math.random() * 100) / 10;
 	      }
 	      p.size += (p.maxSize - p.size) * 0.1;
 	      p.life -= 10;
@@ -1796,6 +1940,262 @@
 	        ctx.restore();
 	      }
 	    }
+	  },
+	  "leaf": {
+	    // Made by HwiteCat
+	    x: p => p.x + (Math.random() - 0.5) * 60,
+	    y: p => p.y + (Math.random() - 0.5) * 10,
+	    angle: p => Math.random() * Math.PI * 2,
+	    size: p => (12 * Math.random() + 8) * p.size,
+	    life: p => 1250 * p.size,
+	    speed: p => (Math.random() * 3 + 1) * Math.sqrt(p.size),
+	    gravity: p => 0.12,
+	    draw: (ctx, p) => {
+	      if (!p.rotation) p.rotation = Math.random() * Math.PI * 2;
+	      if (!p.rotationSpeed) p.rotationSpeed = (Math.random() - 0.5) * 0.02;
+	      if (!p.sway) p.sway = (Math.random() - 0.5) * 0.2;
+	      if (!p.swaySpeed) p.swaySpeed = (Math.random() - 0.5) * 0.02;
+	      p.speed *= 0.98;
+	      p.x += Math.cos(p.angle) * p.speed;
+	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
+	      p.life -= 3;
+	      if (p.rotation !== undefined) {
+	        p.rotation += p.rotationSpeed;
+	      }
+	      if (p.scale !== undefined) {
+	        p.scale += p.scaleSpeed;
+	        p.scale = Math.max(0.1, p.scale);
+	      }
+	      if (p.sway !== undefined) {
+	        p.x += Math.sin(p.y * p.swaySpeed) * p.sway;
+	      }
+	      if (p.life > 0) {
+	        ctx.save();
+	        ctx.translate(p.x, p.y);
+	        ctx.rotate(p.rotation);
+	        ctx.scale(p.scale, 1);
+	        ctx.beginPath();
+	        ctx.moveTo(0, -p.size);
+	        ctx.bezierCurveTo(p.size / 2, -p.size / 2, p.size / 2, 0, 0, p.size);
+	        ctx.bezierCurveTo(-p.size / 2, 0, -p.size / 2, -p.size / 2, 0, -p.size);
+	        ctx.fillStyle = p.color;
+	        ctx.fill();
+	        ctx.restore();
+	      }
+	    }
+	  },
+	  "slash": {
+	    // Main slash effect
+	    x: p => p.x,
+	    y: p => p.y,
+	    angle: p => Math.random() * Math.PI * 2,
+	    size: p => 2 * p.size,
+	    life: p => 250 * p.size,
+	    draw: (ctx, p) => {
+	      if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
+	      if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
+	      p.life -= 2; // Even slower fade
+
+	      if (p.life > 0) {
+	        const alpha = p.life / 500;
+	        ctx.save();
+	        ctx.translate(p.x, p.y);
+	        ctx.rotate(p.angle);
+
+	        // Draw main slash line with improved tapered shape
+	        ctx.beginPath();
+	        ctx.moveTo(-p.length / 2, 0);
+	        ctx.quadraticCurveTo(-p.length / 4, -p.maxWidth * 0.6, -p.length / 6, -p.maxWidth);
+	        ctx.lineTo(p.length / 6, -p.maxWidth);
+	        ctx.quadraticCurveTo(p.length / 4, -p.maxWidth * 0.6, p.length / 2, 0);
+	        ctx.quadraticCurveTo(p.length / 4, p.maxWidth * 0.6, p.length / 6, p.maxWidth);
+	        ctx.lineTo(-p.length / 6, p.maxWidth);
+	        ctx.quadraticCurveTo(-p.length / 4, p.maxWidth * 0.6, -p.length / 2, 0);
+	        ctx.closePath();
+	        ctx.fillStyle = p.color.replace('0.9', alpha.toString());
+	        ctx.fill();
+
+	        // Enhanced glow effect
+	        ctx.beginPath();
+	        ctx.moveTo(-p.length / 2, 0);
+	        ctx.quadraticCurveTo(-p.length / 4, -p.maxWidth * 0.8, -p.length / 6, -p.maxWidth * 1.5);
+	        ctx.lineTo(p.length / 6, -p.maxWidth * 1.5);
+	        ctx.quadraticCurveTo(p.length / 4, -p.maxWidth * 0.8, p.length / 2, 0);
+	        ctx.quadraticCurveTo(p.length / 4, p.maxWidth * 0.8, p.length / 6, p.maxWidth * 1.5);
+	        ctx.lineTo(-p.length / 6, p.maxWidth * 1.5);
+	        ctx.quadraticCurveTo(-p.length / 4, p.maxWidth * 0.8, -p.length / 2, 0);
+	        ctx.closePath();
+	        ctx.fillStyle = p.color.replace('0.9', (alpha * 0.3).toString());
+	        ctx.fill();
+	        ctx.restore();
+	      }
+	    }
+	  },
+	  "slashParticle": {
+	    // Enhanced particle effect for slash
+	    x: p => p.x + (Math.random() - 0.5) * 15,
+	    // Tighter initial spread
+	    y: p => p.y + (Math.random() - 0.5) * 15,
+	    angle: p => {
+	      const baseAngle = p.parentAngle || Math.random() * Math.PI * 2;
+	      return baseAngle + (Math.random() - 0.5) * 0.1; // Very small variation
+	    },
+	    size: p => (2 * Math.random() + 2) * p.size,
+	    // Bigger particles
+	    life: p => 600 * p.size,
+	    // Adjusted for faster movement
+	    speed: p => (Math.random() * 1 + 3) * Math.sqrt(p.size),
+	    // Much faster speed
+	    gravity: p => 0.02,
+	    // Minimal gravity for more directional movement
+	    draw: (ctx, p) => {
+	      p.speed *= 0.998; // Very smooth deceleration
+	      p.x += Math.cos(p.angle) * p.speed;
+	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
+	      p.life -= 3;
+	      if (p.life > 0) {
+	        const alpha = p.life / 400;
+	        ctx.save();
+	        ctx.translate(p.x, p.y);
+	        ctx.rotate(p.angle);
+
+	        // Draw particle with more elongation in movement direction
+	        ctx.beginPath();
+	        ctx.moveTo(-p.size / 2, 0);
+	        ctx.quadraticCurveTo(-p.size / 4, -p.size / 2, 0, -p.size * 1.2);
+	        ctx.quadraticCurveTo(p.size / 4, -p.size / 2, p.size / 2, 0);
+	        ctx.quadraticCurveTo(p.size / 4, p.size / 2, 0, p.size * 1.2);
+	        ctx.quadraticCurveTo(-p.size / 4, p.size / 2, -p.size / 2, 0);
+	        ctx.closePath();
+	        ctx.fillStyle = p.color.replace('0.9', alpha.toString());
+	        ctx.fill();
+
+	        // Add small glow to particles
+	        ctx.beginPath();
+	        ctx.arc(0, 0, p.size * 1.2, 0, Math.PI * 2);
+	        ctx.fillStyle = p.color.replace('0.9', (alpha * 0.3).toString());
+	        ctx.fill();
+	        ctx.restore();
+	      }
+	    }
+	  },
+	  "waterRipple": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => 7 * p.size,
+	    life: p => 1200 * p.size,
+	    draw: (ctx, p) => {
+	      if (!p.ripples) {
+	        p.ripples = [{
+	          radius: 0,
+	          opacity: 0.5,
+	          width: 3,
+	          speed: 0.7
+	        },
+	        // Fast, bright inner ripple
+	        {
+	          radius: 0,
+	          opacity: 0.5,
+	          width: 2,
+	          speed: 0.5
+	        },
+	        // Medium ripple
+	        {
+	          radius: 0,
+	          opacity: 0.5,
+	          width: 1.5,
+	          speed: 0.3
+	        } // Slow, faint outer ripple
+	        ];
+	      }
+	      p.life -= 1;
+
+	      // Update each ripple
+	      p.ripples.forEach((ripple, index) => {
+	        // Expand the ripple
+	        ripple.radius += ripple.speed;
+
+	        // Calculate opacity based on radius
+	        const maxRadius = 30 * p.size;
+	        const fadeStart = maxRadius * 0.6;
+	        if (ripple.radius > fadeStart) {
+	          ripple.opacity *= 0.98; // Gradual fade out
+	        }
+
+	        // Draw the ripple if it's still visible
+	        if (ripple.opacity > 0.05 && ripple.radius < maxRadius) {
+	          ctx.beginPath();
+	          ctx.strokeStyle = p.color.replace('0.8', ripple.opacity.toString());
+	          ctx.lineWidth = ripple.width * (1 - ripple.radius / maxRadius);
+	          ctx.arc(p.x, p.y, ripple.radius, 0, Math.PI * 2);
+	          ctx.stroke();
+
+	          // Add a second, fainter ring for more water-like effect
+	          if (ripple.radius > 5) {
+	            ctx.beginPath();
+	            ctx.strokeStyle = p.color.replace('0.8', (ripple.opacity * 0.5).toString());
+	            ctx.lineWidth = ripple.width * 0.5 * (1 - ripple.radius / maxRadius);
+	            ctx.arc(p.x, p.y, ripple.radius - 2, 0, Math.PI * 2);
+	            ctx.stroke();
+	          }
+	        }
+	      });
+	    }
+	  },
+	  "waterSplash": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => (2 * Math.random() + 5) * p.size,
+	    // Smaller size
+	    life: p => 800 * p.size,
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.particles = [];
+	        // Create particles in a circular pattern
+	        const particleCount = 7; // More particles for better coverage
+	        for (let i = 0; i < particleCount; i++) {
+	          const angle = i / particleCount * Math.PI * 2;
+	          // Add some random variation to the angle
+	          const angleVariation = (Math.random() - 0.5) * 0.5;
+	          const finalAngle = angle + angleVariation;
+
+	          // Create size variation with smaller base size
+	          const sizeVariation = Math.random() * 1.5 + 0.5; // Random multiplier between 0.5 and 2
+	          const baseSize = (Math.random() * 0.8 + 0.4) * p.size; // Reduced base size
+
+	          p.particles.push({
+	            x: p.x,
+	            y: p.y,
+	            angle: finalAngle,
+	            speed: (Math.random() * 1.5 + 1) * Math.sqrt(p.size),
+	            size: baseSize * sizeVariation,
+	            initialSize: baseSize * sizeVariation,
+	            life: 800 * p.size,
+	            gravity: 0.9 + (Math.random() * 0.2 - 0.1) // Slight gravity variation
+	          });
+	        }
+	      }
+	      p.life -= 2;
+
+	      // Update and draw particles
+	      p.particles.forEach(particle => {
+	        particle.speed *= 0.98; // Deceleration
+	        particle.x += Math.cos(particle.angle) * particle.speed;
+	        particle.y += Math.sin(particle.angle) * particle.speed + particle.gravity;
+	        particle.life -= 2;
+	        const lifeRatio = particle.life / (800 * p.size);
+	        const opacity = lifeRatio * 0.6; // More transparent
+	        // More dramatic shrinking with cubic easing
+	        particle.size = particle.initialSize * Math.pow(lifeRatio, 3);
+	        if (particle.life > 0) {
+	          ctx.beginPath();
+	          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+	          ctx.fillStyle = p.color.replace('0.8', opacity.toString());
+	          ctx.fill();
+	        }
+	      });
+	    }
 	  }
 	};
 
@@ -1830,6 +2230,7 @@
 	  // Store the element's original position/transform
 	  const originalTransform = element.style.transform || '';
 	  const originalTransition = element.style.transition || '';
+	  intensity *= settingsMap.shakeEffectScale.value || 1;
 
 	  // Scale intensity based on size/damage
 	  const scaledIntensity = Math.min(10, intensity);
@@ -1921,7 +2322,7 @@
 	      ctx.textAlign = 'center';
 	      ctx.textBaseline = 'middle';
 	      // border
-	      ctx.strokeStyle = effect.otherInfo.color;
+	      ctx.strokeStyle = effect.color;
 	      ctx.lineWidth = 6;
 	      ctx.strokeText(damageText, effect.otherInfo.end.x, effect.otherInfo.end.y - 20);
 	      // main
@@ -1995,7 +2396,10 @@
 
 	    // 运动参数 - 向斜上方抛物线轨迹
 	    this.gravity = this.effect.gravity || 0.2; // 重力加速度
+	    this.gravity *= settingsMap.projectileHeightScale.value || 1; // 高度缩放因子
+
 	    this.initialSpeed = initialSpeed * (this.effect.speedFactor || 1); // 初始速度参数
+	    this.initialSpeed *= settingsMap.projectileSpeedScale.value || 1; // 速度缩放因子
 
 	    // 计算水平距离和高度差
 	    const dx = endX - startX;
@@ -2026,6 +2430,7 @@
 	    // 拖尾效果
 	    this.trail = [];
 	    this.maxTrailLength = Math.floor((this.effect.trailLength || 50) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
+	    this.maxTrailLength *= settingsMap.projectileTrailLength.value || 1; // 拖尾缩放因子
 	  }
 	  update() {
 	    // 更新速度 (考虑重力)
@@ -2089,28 +2494,33 @@
 	  const x = projectile.x;
 	  const y = projectile.y;
 	  const size = projectile.size;
-	  projectile.color;
+	  const color = projectile.color;
 	  const otherInfo = projectile.otherInfo;
 
 	  // Resize for onHit effect
 	  const sizeScale = Math.max(1, Math.min(100, size)) / 20;
 	  projectile.size = sizeScale;
+	  const sizeFactor = settingsMap.onHitScale.value || 1;
+	  const particleFactor = settingsMap.particleEffectRatio.value || 1;
+	  const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
 	  const effects = [];
 	  const onHitEffect = projectile.effect.onHit;
 	  for (const effectName in onHitEffect) {
 	    const effect = onHitEffectsMap[effectName];
 	    if (!effect) continue;
-	    const effectCount = onHitEffect[effectName](projectile.size);
+	    const effectCount = Math.ceil(onHitEffect[effectName](projectile.size) * particleFactor);
 	    for (let i = 0; i < effectCount; i++) {
+	      const effectSize = (effect.size ? effect.size(projectile) : Math.random() * 10 + 5) * sizeFactor;
+	      const effectLife = (effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor;
 	      effects.push({
 	        x: effect.x ? effect.x(projectile) : x,
 	        y: effect.y ? effect.y(projectile) : y,
 	        angle: effect.angle ? effect.angle(projectile) : Math.random() * Math.PI * 2,
 	        alpha: effect.alpha ? effect.alpha(projectile) : 0.8,
-	        size: effect.size ? effect.size(projectile) : Math.random() * 10 + 5,
+	        size: effectSize,
 	        speed: effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2,
 	        gravity: effect.gravity ? effect.gravity(projectile) : 0,
-	        life: effect.life ? effect.life(projectile) : 1000,
+	        life: effectLife,
 	        color: effect.color ? effect.color(projectile) : projectile.color,
 	        draw: effect.draw ? effect.draw : (ctx, p) => {}
 	      });
@@ -2123,6 +2533,7 @@
 	    active: true,
 	    count: 0,
 	    maxCount: 120,
+	    color: color,
 	    otherInfo: otherInfo
 	  };
 	  activeOnHitAnimation.push(onHitEffectData);
@@ -2132,11 +2543,13 @@
 	    return;
 	  }
 	  const combatUnitContainer = endElement.querySelector(".CombatUnit_splatsContainer__2xcc0");
-	  combatUnitContainer.style.visibility = "hidden";
+	  if (!settingsMap.originalDamageDisplay.value) {
+	    combatUnitContainer.style.visibility = "hidden";
+	  }
 	  const padding = 30;
 	  const randomRange = {
-	    x: Math.floor(Math.random() * (combatUnitContainer.offsetWidth - 2 * padding) - combatUnitContainer.offsetWidth / 2 + padding),
-	    y: Math.floor(Math.random() * (combatUnitContainer.offsetHeight - 2 * padding) - combatUnitContainer.offsetHeight / 2 + padding)
+	    x: Math.floor((Math.random() - 0.5) * (combatUnitContainer.offsetWidth - 2 * padding)),
+	    y: Math.floor((Math.random() - 0.1) * (combatUnitContainer.offsetHeight - padding))
 	  };
 	  const projectileLimit = 30;
 	  const start = getElementCenter(startElement);
