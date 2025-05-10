@@ -1,5 +1,6 @@
 import { projectileEffectsMap } from "./effects/projectile.js";
 import { onHitEffectsMap } from "./effects/hit.js";
+import { settingsMap } from "./setting.js";
 
 const canvas = initTrackerCanvas();
 const ctx = canvas.getContext('2d');
@@ -130,7 +131,7 @@ function updateOnHits() {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             // border
-            ctx.strokeStyle = effect.otherInfo.color;
+            ctx.strokeStyle = effect.color;
             ctx.lineWidth = 6;
             ctx.strokeText(damageText, effect.otherInfo.end.x, effect.otherInfo.end.y - 20);
             // main
@@ -341,6 +342,7 @@ function createOnHitEffect(projectile) {
         active: true,
         count: 0,
         maxCount: 120,
+        color: color,
         otherInfo: otherInfo,
     };
     
@@ -355,8 +357,8 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
     combatUnitContainer.style.visibility = "hidden";
     const padding = 30;
     const randomRange = {
-        x: Math.floor((Math.random() * (combatUnitContainer.offsetWidth - 2 * padding)) - combatUnitContainer.offsetWidth / 2 + padding),
-        y: Math.floor((Math.random() * (combatUnitContainer.offsetHeight - 2 * padding)) - combatUnitContainer.offsetHeight / 2 + padding),
+        x: Math.floor((Math.random() - 0.5) * (combatUnitContainer.offsetWidth - 2 * padding)),
+        y: Math.floor((Math.random()) * (combatUnitContainer.offsetHeight - padding)),
     }
 
     const projectileLimit = 30;

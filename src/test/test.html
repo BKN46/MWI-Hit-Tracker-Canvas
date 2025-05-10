@@ -22,13 +22,19 @@
             height: 160px;
             width: 106px;
             position: fixed;
-            background-color: gray;
             align-items: center;
             font-size: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            color: white;
+        }
+        #buttonList {
+            position: fixed;
+            top: 400px;
+            left: 100px;
+            display: grid;
+            grid-column: 4;
+            grid-row: auto;
         }
     </style>
     <link rel="stylesheet" type="text/css" href="game.css">
@@ -87,7 +93,7 @@
                 </div>
             </div>
         </div>
-        <button id="test" style="position: fixed;top:400px;left:200px;width: 100px;">test</button>
+        <div id="buttonList"></div>
     </div>
 
     <script type="module">
@@ -96,20 +102,17 @@
         import { animate, createProjectile } from "../draw.js";
         import { waitForSetttins, settingsMap } from "../setting.js";
 
-        const testButton = document.getElementById("test");
-        testButton.addEventListener("click", () => {
-            // 测试动画
-            const from = 0; // 玩家索引
-            const to = 0; // 敌人索引
-            const hpDiff = Math.floor(Math.random() * 800 + 50); // 伤害值
-            const reversed = false; // 是否反向
-            const abilityHrid = 'nature'; // 技能ID
-            const toPlayer = false; // 是否目标为玩家
-
-            console.log(`registProjectile: ${abilityHrid} ${hpDiff}`);
-
-            registProjectile(from, to, hpDiff, reversed, abilityHrid, toPlayer);
-        });
+        for (const [key, value] of Object.entries(projectileEffectsMap)) {
+            const button = document.createElement("button");
+            button.innerText = key;
+            button.style.margin = "5px";
+            button.addEventListener("click", () => {
+                console.log(`registProjectile: ${key}`);
+                const damage = Math.floor(Math.random() * 800 + 50);
+                registProjectile(0, 0, damage, false, key);
+            });
+            document.getElementById("buttonList").appendChild(button);
+        }
 
         // 动画效果
         function registProjectile(from, to, hpDiff, reversed = false, abilityHrid = 'default', toPlayer = false) {

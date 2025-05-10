@@ -86,7 +86,7 @@ export const projectileEffectsMap = {
         trailLength: 0,
         gravity: 0,
         shake: false,
-        color: 'rgba(0, 255, 0, 0.5)',
+        color: 'rgba(0, 255, 0, 0.8)',
         onHit: {
             "holyCross": (size) => Math.min(Math.ceil(size * 12), 10),
         },
@@ -97,7 +97,7 @@ export const projectileEffectsMap = {
         trailLength: 0,
         gravity: 0,
         shake: false,
-        color: 'rgba(68, 120, 241, 0.69)',
+        color: 'rgba(68, 120, 241, 0.8)',
         onHit: {
             "holyCross": (size) => Math.min(Math.ceil(size * 12), 10),
         },
