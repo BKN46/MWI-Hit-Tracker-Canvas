@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.0.2
+// @version        1.0.3
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1417,6 +1417,14 @@
 	    max: 5.0,
 	    step: 0.1
 	  },
+	  particleSpeedRatio: {
+	    id: "particleSpeedRatio",
+	    desc: isZH ? "粒子效果初速度" : "Particle Effect Speed Ratio",
+	    value: 1.0,
+	    min: 0.1,
+	    max: 5.0,
+	    step: 0.1
+	  },
 	  projectileTrailLength: {
 	    id: "projectileTrailLength",
 	    desc: isZH ? "弹道尾迹长度" : "Projectile Trail Length",
@@ -1429,6 +1437,14 @@
 	    id: "originalDamageDisplay",
 	    desc: isZH ? "原版伤害显示" : "Original Damage Display",
 	    value: false
+	  },
+	  damageTextLifespan: {
+	    id: "damageTextLifespan",
+	    desc: isZH ? "伤害文本持续时间" : "Damage Text Lifespan",
+	    value: 120,
+	    min: 30,
+	    max: 480,
+	    step: 10
 	  },
 	  damageTextScale: {
 	    id: "damageTextScale",
@@ -1700,7 +1716,7 @@
 	          settingsMap[option.id].g = option.g;
 	          settingsMap[option.id].b = option.b;
 	        }
-	      } else if (option) {
+	      } else if (option && option.value && option.id && settingsMap[option.id]) {
 	        settingsMap[option.id].value = option.value;
 	      }
 	    }
@@ -2687,7 +2703,9 @@
 	  projectile.size = Math.max(1, Math.min(100, projectile.size)) / 20 / projectileScale;
 	  const sizeFactor = settingsMap.onHitScale.value || 1;
 	  const particleFactor = settingsMap.particleEffectRatio.value || 1;
+	  const particleSpeedFactor = settingsMap.particleSpeedRatio.value || 1;
 	  const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
+	  const fpsFactor = Math.min(Math.max(160 / fps, 0.125), 8);
 	  const effects = [];
 	  const onHitEffect = projectile.effect.onHit;
 	  for (const effectName in onHitEffect) {
@@ -2696,14 +2714,15 @@
 	    const effectCount = Math.ceil(onHitEffect[effectName](projectile.size) * particleFactor);
 	    for (let i = 0; i < effectCount; i++) {
 	      const effectSize = (effect.size ? effect.size(projectile) : Math.random() * 10 + 5) * sizeFactor;
-	      const effectLife = (effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor;
+	      const effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / fpsFactor);
+	      const effectSpeed = Math.ceil((effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2) * fpsFactor * particleSpeedFactor);
 	      effects.push({
 	        x: effect.x ? effect.x(projectile) : x,
 	        y: effect.y ? effect.y(projectile) : y,
 	        angle: effect.angle ? effect.angle(projectile) : Math.random() * Math.PI * 2,
 	        alpha: effect.alpha ? effect.alpha(projectile) : 0.8,
 	        size: effectSize,
-	        speed: effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2,
+	        speed: effectSpeed,
 	        gravity: effect.gravity ? effect.gravity(projectile) : 0,
 	        life: effectLife,
 	        color: effect.color ? effect.color(projectile) : projectile.color,
@@ -2713,11 +2732,13 @@
 	  }
 
 	  // 存储命中动画的活跃状态，用于跟踪
+	  const damageTextLifespan = settingsMap.damageTextLifespan.value || 120;
+	  const lifeSpan = Math.ceil(damageTextLifespan / fpsFactor);
 	  const onHitEffectData = {
 	    effects: [...effects],
 	    active: true,
 	    count: 0,
-	    maxCount: 120,
+	    maxCount: lifeSpan,
 	    color: color,
 	    otherInfo: otherInfo
 	  };

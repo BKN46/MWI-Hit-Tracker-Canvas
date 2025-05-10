@@ -345,7 +345,9 @@ function createOnHitEffect(projectile) {
 
     const sizeFactor = settingsMap.onHitScale.value || 1;
     const particleFactor = settingsMap.particleEffectRatio.value || 1;
+    const particleSpeedFactor = settingsMap.particleSpeedRatio.value || 1;
     const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
+    const fpsFactor = Math.min(Math.max(160 / fps, 0.125), 8);
 
     const effects = [];
 
@@ -357,7 +359,8 @@ function createOnHitEffect(projectile) {
         const effectCount = Math.ceil(onHitEffect[effectName](projectile.size) * particleFactor);
         for (let i = 0; i < effectCount; i++) {
             const effectSize = (effect.size ? effect.size(projectile) : Math.random() * 10 + 5) * sizeFactor;
-            const effectLife = (effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor;
+            const effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / fpsFactor);
+            const effectSpeed = Math.ceil((effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2) * fpsFactor * particleSpeedFactor);
 
             effects.push({
                 x: effect.x ? effect.x(projectile) : x, 
@@ -365,7 +368,7 @@ function createOnHitEffect(projectile) {
                 angle: effect.angle ? effect.angle(projectile) : Math.random() * Math.PI * 2,
                 alpha: effect.alpha ? effect.alpha(projectile) : 0.8,
                 size: effectSize,
-                speed: effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2,
+                speed: effectSpeed,
                 gravity: effect.gravity ? effect.gravity(projectile) : 0,
                 life: effectLife,
                 color: effect.color ? effect.color(projectile) : projectile.color,
@@ -375,11 +378,14 @@ function createOnHitEffect(projectile) {
     }
 
     // 存储命中动画的活跃状态，用于跟踪
+    const damageTextLifespan = settingsMap.damageTextLifespan.value || 120;
+    const lifeSpan = Math.ceil(damageTextLifespan / fpsFactor);
+
     const onHitEffectData = {
         effects: [...effects],
         active: true,
         count: 0,
-        maxCount: 120,
+        maxCount: lifeSpan,
         color: color,
         otherInfo: otherInfo,
     };

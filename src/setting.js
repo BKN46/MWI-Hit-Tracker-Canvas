@@ -66,6 +66,14 @@ export let settingsMap = {
         max: 5.0,
         step: 0.1,
     },
+    particleSpeedRatio: {
+        id: "particleSpeedRatio",
+        desc: isZH ? "粒子效果初速度":"Particle Effect Speed Ratio",
+        value: 1.0,
+        min: 0.1,
+        max: 5.0,
+        step: 0.1,
+    },
     projectileTrailLength: {
         id: "projectileTrailLength",
         desc: isZH ? "弹道尾迹长度":"Projectile Trail Length",
@@ -78,6 +86,14 @@ export let settingsMap = {
         id: "originalDamageDisplay",
         desc: isZH ? "原版伤害显示":"Original Damage Display",
         value: false,
+    },
+    damageTextLifespan: {
+        id: "damageTextLifespan",
+        desc: isZH ? "伤害文本持续时间":"Damage Text Lifespan",
+        value: 120,
+        min: 30,
+        max: 480,
+        step: 10,
     },
     damageTextScale: {
         id: "damageTextScale",
@@ -378,7 +394,7 @@ export function readSettings() {
                     settingsMap[option.id].g = option.g;
                     settingsMap[option.id].b = option.b;
                 }
-            } else if(option) {
+            } else if(option && option.value && option.id && settingsMap[option.id]) {
                 settingsMap[option.id].value = option.value;
             }
         }
