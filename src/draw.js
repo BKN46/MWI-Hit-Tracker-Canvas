@@ -2,7 +2,9 @@ import { projectileEffectsMap } from "./effects/projectile.js";
 import { abilityEffectsMap } from "./effects/abilities.js";
 import { onHitEffectsMap } from "./effects/hit.js";
 import { settingsMap } from "./setting.js";
+import { getElementCenter } from "./effects/utils.js";
 import { applyShakeEffect, addDamageHPBar, applyDeadEffect } from "./effects/domEffect.js";
+import { addEffect, activeEffects } from "./effects/manager.js";
 
 const canvas = initTrackerCanvas();
 const ctx = canvas.getContext('2d');
@@ -200,9 +202,6 @@ class Projectile {
 // Projectiles管理
 let projectiles = [];
 
-// 存储所有活跃的爆炸效果
-let activeOnHitAnimation = [];
-
 // 爆炸效果函数
 function createOnHitEffect(projectile) {
     const x = projectile.x;
@@ -263,23 +262,23 @@ function createOnHitEffect(projectile) {
         effects: [...effects],
         active: true,
         count: 0,
-        maxCount: lifeSpan,
+        lifespan: lifeSpan,
         color: color,
         otherInfo: otherInfo,
     };
     
-    activeOnHitAnimation.push(onHitEffectData);
+    addEffect(onHitEffectData);
 }
 
 // 更新和渲染所有命中效果
 function updateOnHits() {
     // 遍历所有活跃的命中
-    for (let i = activeOnHitAnimation.length - 1; i >= 0; i--) {
-        const effect = activeOnHitAnimation[i];
+    for (let i = activeEffects.length - 1; i >= 0; i--) {
+        const effect = activeEffects[i];
         effect.count++;
 
-        if (effect.count >= effect.maxCount) {
-            activeOnHitAnimation.splice(i, 1);
+        if (effect.count >= effect.lifespan) {
+            activeEffects.splice(i, 1);
             continue;
         }
 
@@ -369,18 +368,4 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
     } else {
         projectiles.shift();
     }
-}
-
-function getElementCenter(element) {
-    const rect = element.getBoundingClientRect();
-    if (element.innerText.trim() === '') {
-        return {
-            x: rect.left + rect.width/2,
-            y: rect.top
-        };
-    }
-    return {
-        x: rect.left + rect.width/2,
-        y: rect.top + rect.height/2
-    };
 }
