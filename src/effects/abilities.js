@@ -4,7 +4,7 @@ export const abilityEffectsMap = {
     'heal': 'heal',
 
     '/abilities/fireball': "fireball",
-    '/abilities/firestorm': "lavaPlume",
+    '/abilities/firestorm': "fireTornado",
     '/abilities/flame_blast': "lavaPlume",
     '/abilities/smoke_burst': "fireball",
     '/abilities/aqua_arrow': "water",

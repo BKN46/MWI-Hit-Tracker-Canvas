@@ -259,11 +259,11 @@ export const projectileEffectsMap = {
         draw: (ctx, p) => {},
     },
     'debug': {
-        speedFactor: 1,
-        trailLength: 35,
+        speedFactor: 2,
+        trailLength: 3,
         shake: true,
         onHit: {
-            "lava": (size) => Math.min(Math.ceil(size * 6), 10),
+            "tornado": (size) => Math.min(Math.ceil(size * 5), 8),
         },
         draw: (ctx, p) => {
             ctx.beginPath();
@@ -554,5 +554,19 @@ export const projectileEffectsMap = {
             
             ctx.restore();
         }
-    }
+    },
+    'fireTornado': {
+        speedFactor: 2,
+        trailLength: 3,
+        shake: true,
+        onHit: {
+            "tornado": (size) => Math.min(Math.ceil(size * 5), 8),
+        },
+        draw: (ctx, p) => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        },
+    },
 }
