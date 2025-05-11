@@ -522,59 +522,48 @@ export const onHitEffectsMap = {
                     }
                 });
                 
-                // Draw diamond shape
+                // 4角星星
+                const vertices = {
+                    top: { x: 0, y: -p.pierceLength/2.5 },          // Reduced vertical height
+                    right: { x: p.pierceLength, y: 0 },           // Maintained horizontal stretch
+                    bottom: { x: 0, y: p.pierceLength/2.5 },        // Reduced vertical height
+                    left: { x: -p.pierceLength, y: 0 }            // Maintained horizontal stretch
+                };
+
+                // Define inner points for curved connections (closer to center)
+                const innerPoints = {
+                    topRight: { x: p.pierceLength/7, y: -p.pierceLength/10 },    // Moved closer to center
+                    bottomRight: { x: p.pierceLength/7, y: p.pierceLength/10 },   // Moved closer to center
+                    bottomLeft: { x: -p.pierceLength/7, y: p.pierceLength/10 },   // Moved closer to center
+                    topLeft: { x: -p.pierceLength/7, y: -p.pierceLength/10 }      // Moved closer to center
+                };
+                
+                // Draw the shape with straight lines
                 ctx.beginPath();
+                ctx.moveTo(vertices.top.x, vertices.top.y);
                 
-                // Top point
-                ctx.moveTo(0, -p.pierceLength/8);
+                // Draw straight lines between vertices and inner points
+                // Top to right
+                ctx.lineTo(innerPoints.topRight.x, innerPoints.topRight.y);
+                ctx.lineTo(vertices.right.x, vertices.right.y);
                 
-                // Right point
-                ctx.lineTo(p.pierceLength/1.2, 0);
+                // Right to bottom
+                ctx.lineTo(innerPoints.bottomRight.x, innerPoints.bottomRight.y);
+                ctx.lineTo(vertices.bottom.x, vertices.bottom.y);
                 
-                // Bottom point
-                ctx.lineTo(0, p.pierceLength/8);
+                // Bottom to left
+                ctx.lineTo(innerPoints.bottomLeft.x, innerPoints.bottomLeft.y);
+                ctx.lineTo(vertices.left.x, vertices.left.y);
                 
-                // Left point
-                ctx.lineTo(-p.pierceLength/1.2, 0);
+                // Left to top
+                ctx.lineTo(innerPoints.topLeft.x, innerPoints.topLeft.y);
+                ctx.lineTo(vertices.top.x, vertices.top.y);
                 
-                // Close the shape
                 ctx.closePath();
                 
                 // Add main fill with enhanced opacity
                 ctx.fillStyle = p.color.replace('0.8', (alpha * 0.9).toString());
                 ctx.fill();
-                
-                // Add highlight effect
-                const highlightGradient = ctx.createLinearGradient(
-                    0, -p.pierceLength/8,
-                    0, p.pierceLength/8
-                );
-                highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.3})`);
-                highlightGradient.addColorStop(0.5, `rgba(255, 255, 255, ${alpha * 0.1})`);
-                highlightGradient.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.3})`);
-                
-                ctx.fillStyle = highlightGradient;
-                ctx.fill();
-                
-                // Add edge glow
-                ctx.strokeStyle = p.color.replace('0.8', (alpha * 0.4).toString());
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                // Add energy particles at the corners
-                const corners = [
-                    { x: 0, y: -p.pierceLength/8 },
-                    { x: p.pierceLength/1.2, y: 0 },
-                    { x: 0, y: p.pierceLength/8 },
-                    { x: -p.pierceLength/1.2, y: 0 }
-                ];
-                
-                corners.forEach(corner => {
-                    ctx.beginPath();
-                    ctx.arc(corner.x, corner.y, p.size * 0.3, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.4})`;
-                    ctx.fill();
-                });
                 
                 ctx.restore();
             }
