@@ -1,6 +1,7 @@
 import { waitForSetttins, settingsMap } from "./setting.js";
 import { animate, createProjectile } from "./draw.js";
 import { resetAllMonsterSvg } from "./effects/domEffect.js";
+import { shapes } from "./effects/shape.js";
 
 // #region Setting
 waitForSetttins();
