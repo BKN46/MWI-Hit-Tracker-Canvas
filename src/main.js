@@ -1,10 +1,15 @@
-import { waitForSetttins, settingsMap } from "./setting.js";
+import { waitForSettings, settingsMap } from "./setting.js";
 import { animate, createProjectile } from "./draw.js";
 import { resetAllMonsterSvg } from "./effects/domEffect.js";
 import { shapes } from "./effects/shape.js";
+import { deathEffect } from "./effects/domEffect.js";
+import { projectileEffectsMap } from "./effects/projectile.js";
 
 // #region Setting
-waitForSetttins();
+waitForSettings({
+    monsterDeadAnimationStyle: Object.keys(deathEffect),
+    allProjectiles: Object.keys(projectileEffectsMap),
+});
 
 hookWS();
 
@@ -255,14 +260,19 @@ export function registProjectile({
 
         const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker"+from];
         let lineColor = "rgba("+trackerSetting.r+", "+trackerSetting.g+", "+trackerSetting.b+", 1)";
-
+        if (["selfHeal", "selfManaRegen", "heal"].indexOf(abilityHrid) <= -1){
+            if (trackerSetting.trackStyle === "null") {
+                return null;
+            } else if (trackerSetting.trackStyle != "auto") {
+                abilityHrid = trackerSetting.trackStyle;
+            }
+        }
         if (!reversed) {
             createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid, isCrit, isKill);
         } else {
             createProjectile(effectTo, effectFrom, lineColor, 1, hpDiff, abilityHrid, isCrit, isKill);
         }
     }
-
 }
 
 // 启动动画

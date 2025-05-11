@@ -6,6 +6,13 @@ export const shapes = {
         ctx.fillStyle = p.color;
         ctx.fill();
     },
+    "rectangle": (ctx, p={}) => {
+        // {x, y, size, color}
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.closePath();
+    },
     "star": (ctx, p={}) => {
         // {x, y, size, color, angle}
         ctx.save();

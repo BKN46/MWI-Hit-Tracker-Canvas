@@ -264,7 +264,7 @@ export const projectileEffectsMap = {
         trailLength: 3,
         shake: true,
         onHit: {
-            "tornado": (size) => Math.min(Math.ceil(size * 5), 8),
+            "pixelSmoke": (size) => Math.min(Math.ceil(size * 80), 50),
         },
         draw: (ctx, p) => {
             ctx.beginPath();

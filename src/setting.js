@@ -129,6 +129,12 @@ export let settingsMap = {
         desc: isZH ? "怪物死亡效果":"Monster Dead Animation",
         value: true,
     },
+    monsterDeadAnimationStyle: {
+        id: "monsterDeadAnimationStyle",
+        desc: isZH ? "怪物死亡效果样式":"Monster Dead Animation Style",
+        value: "default",
+        list: [],
+    },
     damageHpBarDropDelay: {
         id: "damageHpBarDropDelay",
         desc: isZH ? "血条掉落延迟":"Hp Bar Drop Delay",
@@ -139,48 +145,54 @@ export let settingsMap = {
     },
     tracker0 : {
         id: "tracker0",
-        desc: isZH ? "玩家颜色 #1":"Player Color1",
+        desc: isZH ? "玩家1":"Player 1",
         isTrue: true,
+        trackStyle: "auto",
         r: 255,
         g: 99,
         b: 132,
     },
     tracker1 : {
         id: "tracker1",
-        desc: isZH ? "玩家颜色 #2":"Player Color2",
+        desc: isZH ? "玩家2":"Player 2",
         isTrue: true,
+        trackStyle: "auto",
         r: 54,
         g: 162,
         b: 235,
     },
     tracker2 : {
         id: "tracker2",
-        desc: isZH ? "玩家颜色 #3":"Player Color3",
+        desc: isZH ? "玩家3":"Player 3",
         isTrue: true,
+        trackStyle: "auto",
         r: 255,
         g: 206,
         b: 86,
     },
     tracker3 : {
         id: "tracker3",
-        desc: isZH ? "玩家颜色 #4":"Player Color4",
+        desc: isZH ? "玩家4":"Player 4",
         isTrue: true,
+        trackStyle: "auto",
         r: 75,
         g: 192,
         b: 192,
     },
     tracker4 : {
         id: "tracker4",
-        desc: isZH ? "玩家颜色 #5":"Player Color5",
+        desc: isZH ? "玩家5":"Player 5",
         isTrue: true,
+        trackStyle: "auto",
         r: 153,
         g: 102,
         b: 255,
     },
     tracker6 : {
         id: "tracker6",
-        desc: isZH ? "敌人颜色":"Enemies Color",
+        desc: isZH ? "敌人":"Enemies",
         isTrue: true,
+        trackStyle: "auto",
         r: 255,
         g: 0,
         b: 0,
@@ -188,7 +200,7 @@ export let settingsMap = {
 };
 readSettings();
 
-export function waitForSetttins() {
+export function waitForSettings(params) {
     const targetNode = document.querySelector("div.SettingsPanel_profileTab__214Bj");
     if (targetNode) {
         if (!targetNode.querySelector("#tracker_settings")) {
@@ -205,9 +217,7 @@ export function waitForSetttins() {
                 if (setting.id.startsWith("tracker")) {
                     insertElem.insertAdjacentHTML(
                         "beforeend",
-                        `<div class="tracker-option"><input type="checkbox" id="${setting.id}" ${setting.isTrue ? "checked" : ""}></input>${
-                            setting.desc
-                        }<div class="color-preview" id="colorPreview_${setting.id}"></div></div>`
+                        `<div class="tracker-option"><input type="checkbox" id="${setting.id}" ${setting.isTrue ? "checked" : ""}></input>${setting.desc} ${isZH ? '颜色' : 'Color'}<div class="color-preview" id="colorPreview_${setting.id}"></div>${isZH ? '样式' : 'Projectile Style'}<select id="projectileStyle_${setting.id}"></select></div>`
                     );
                     const checkedBox = insertElem.querySelector("#" + setting.id);
                     checkedBox.addEventListener("change", (e) => {
@@ -335,6 +345,20 @@ export function waitForSetttins() {
 
                         return backdrop;
                     }
+
+                    const select = document.querySelector("#projectileStyle_" + setting.id);
+                    const projectileStyle = ["auto", "null", ...params.allProjectiles];
+                    for (const option of projectileStyle) {
+                        select.insertAdjacentHTML(
+                            "beforeend",
+                            `<option value="${option}" ${option === setting.trackStyle ? "selected" : ""}>${option}</option>`
+                        );
+                    }
+                    select.addEventListener("change", (e) => {
+                        settingsMap[setting.id].trackStyle = e.target.value;
+                        saveSettings();
+                    });
+
                 } else {
                     if (typeof setting.value === "boolean") {
                         insertElem.insertAdjacentHTML(
@@ -373,6 +397,22 @@ export function waitForSetttins() {
 
                         slider.addEventListener('input', (e) => updateChannel(e.target.value));
                         input.addEventListener('change', (e) => updateChannel(e.target.value));
+                    } else if (setting.list) {
+                        insertElem.insertAdjacentHTML(
+                            "beforeend",
+                            `<div class="tracker-option">${setting.desc}<select id="trackerSetting_${setting.id}"></select></div>`
+                        );
+                        const select = document.querySelector("#trackerSetting_" + setting.id);
+                        for (const option of params[setting.id]) {
+                            select.insertAdjacentHTML(
+                                "beforeend",
+                                `<option value="${option}" ${option === setting.value ? "selected" : ""}>${option}</option>`
+                            );
+                        }
+                        select.addEventListener("change", (e) => {
+                            settingsMap[setting.id].value = e.target.value;
+                            saveSettings();
+                        });
                     }
                 }
             }
@@ -380,7 +420,9 @@ export function waitForSetttins() {
             insertElem.addEventListener("change", saveSettings);
         }
     }
-    setTimeout(waitForSetttins, 500);
+    setTimeout(() => {
+        waitForSettings(params)
+    }, 500);
 };
 
 export function saveSettings() {
@@ -395,6 +437,7 @@ export function readSettings() {
             if (option.id.startsWith("tracker")) {
                 if (settingsMap.hasOwnProperty(option.id)) {
                     settingsMap[option.id].isTrue = option.isTrue;
+                    settingsMap[option.id].trackStyle = option.trackStyle || "auto";
                     settingsMap[option.id].r = option.r;
                     settingsMap[option.id].g = option.g;
                     settingsMap[option.id].b = option.b;

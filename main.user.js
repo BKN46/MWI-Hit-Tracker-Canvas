@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.0.6
+// @version        1.1.0
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -10,7 +10,7 @@
 // @match          https://www.milkywayidle.com/*
 // @license        MIT
 // ==/UserScript==
-(function () {
+(function (exports) {
 	'use strict';
 
 	var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
@@ -1480,6 +1480,12 @@
 	    desc: isZH ? "怪物死亡效果" : "Monster Dead Animation",
 	    value: true
 	  },
+	  monsterDeadAnimationStyle: {
+	    id: "monsterDeadAnimationStyle",
+	    desc: isZH ? "怪物死亡效果样式" : "Monster Dead Animation Style",
+	    value: "default",
+	    list: []
+	  },
 	  damageHpBarDropDelay: {
 	    id: "damageHpBarDropDelay",
 	    desc: isZH ? "血条掉落延迟" : "Hp Bar Drop Delay",
@@ -1490,55 +1496,61 @@
 	  },
 	  tracker0: {
 	    id: "tracker0",
-	    desc: isZH ? "玩家颜色 #1" : "Player Color1",
+	    desc: isZH ? "玩家1" : "Player 1",
 	    isTrue: true,
+	    trackStyle: "auto",
 	    r: 255,
 	    g: 99,
 	    b: 132
 	  },
 	  tracker1: {
 	    id: "tracker1",
-	    desc: isZH ? "玩家颜色 #2" : "Player Color2",
+	    desc: isZH ? "玩家2" : "Player 2",
 	    isTrue: true,
+	    trackStyle: "auto",
 	    r: 54,
 	    g: 162,
 	    b: 235
 	  },
 	  tracker2: {
 	    id: "tracker2",
-	    desc: isZH ? "玩家颜色 #3" : "Player Color3",
+	    desc: isZH ? "玩家3" : "Player 3",
 	    isTrue: true,
+	    trackStyle: "auto",
 	    r: 255,
 	    g: 206,
 	    b: 86
 	  },
 	  tracker3: {
 	    id: "tracker3",
-	    desc: isZH ? "玩家颜色 #4" : "Player Color4",
+	    desc: isZH ? "玩家4" : "Player 4",
 	    isTrue: true,
+	    trackStyle: "auto",
 	    r: 75,
 	    g: 192,
 	    b: 192
 	  },
 	  tracker4: {
 	    id: "tracker4",
-	    desc: isZH ? "玩家颜色 #5" : "Player Color5",
+	    desc: isZH ? "玩家5" : "Player 5",
 	    isTrue: true,
+	    trackStyle: "auto",
 	    r: 153,
 	    g: 102,
 	    b: 255
 	  },
 	  tracker6: {
 	    id: "tracker6",
-	    desc: isZH ? "敌人颜色" : "Enemies Color",
+	    desc: isZH ? "敌人" : "Enemies",
 	    isTrue: true,
+	    trackStyle: "auto",
 	    r: 255,
 	    g: 0,
 	    b: 0
 	  }
 	};
 	readSettings();
-	function waitForSetttins() {
+	function waitForSettings(params) {
 	  const targetNode = document.querySelector("div.SettingsPanel_profileTab__214Bj");
 	  if (targetNode) {
 	    if (!targetNode.querySelector("#tracker_settings")) {
@@ -1547,7 +1559,7 @@
 	      insertElem.insertAdjacentHTML("beforeend", `<div style="float: left; color: orange">${isZH ? "MWI-Hit-Tracker 设置 ：" : "MWI-Hit-Tracker Settings: "}</div></br>`);
 	      for (const setting of Object.values(settingsMap)) {
 	        if (setting.id.startsWith("tracker")) {
-	          insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option"><input type="checkbox" id="${setting.id}" ${setting.isTrue ? "checked" : ""}></input>${setting.desc}<div class="color-preview" id="colorPreview_${setting.id}"></div></div>`);
+	          insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option"><input type="checkbox" id="${setting.id}" ${setting.isTrue ? "checked" : ""}></input>${setting.desc} ${isZH ? '颜色' : 'Color'}<div class="color-preview" id="colorPreview_${setting.id}"></div>${isZH ? '样式' : 'Projectile Style'}<select id="projectileStyle_${setting.id}"></select></div>`);
 	          const checkedBox = insertElem.querySelector("#" + setting.id);
 	          checkedBox.addEventListener("change", e => {
 	            settingsMap[setting.id].isTrue = e.target.checked;
@@ -1669,6 +1681,15 @@
 	            });
 	            return backdrop;
 	          }
+	          const select = document.querySelector("#projectileStyle_" + setting.id);
+	          const projectileStyle = ["auto", "null", ...params.allProjectiles];
+	          for (const option of projectileStyle) {
+	            select.insertAdjacentHTML("beforeend", `<option value="${option}" ${option === setting.trackStyle ? "selected" : ""}>${option}</option>`);
+	          }
+	          select.addEventListener("change", e => {
+	            settingsMap[setting.id].trackStyle = e.target.value;
+	            saveSettings();
+	          });
 	        } else {
 	          if (typeof setting.value === "boolean") {
 	            insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option">${setting.desc}<input type="checkbox" id="trackerSetting_${setting.id}"></input></div>`);
@@ -1698,13 +1719,25 @@
 	            };
 	            slider.addEventListener('input', e => updateChannel(e.target.value));
 	            input.addEventListener('change', e => updateChannel(e.target.value));
+	          } else if (setting.list) {
+	            insertElem.insertAdjacentHTML("beforeend", `<div class="tracker-option">${setting.desc}<select id="trackerSetting_${setting.id}"></select></div>`);
+	            const select = document.querySelector("#trackerSetting_" + setting.id);
+	            for (const option of params[setting.id]) {
+	              select.insertAdjacentHTML("beforeend", `<option value="${option}" ${option === setting.value ? "selected" : ""}>${option}</option>`);
+	            }
+	            select.addEventListener("change", e => {
+	              settingsMap[setting.id].value = e.target.value;
+	              saveSettings();
+	            });
 	          }
 	        }
 	      }
 	      insertElem.addEventListener("change", saveSettings);
 	    }
 	  }
-	  setTimeout(waitForSetttins, 500);
+	  setTimeout(() => {
+	    waitForSettings(params);
+	  }, 500);
 	}
 	function saveSettings() {
 	  localStorage.setItem("tracker_settingsMap", JSON.stringify(settingsMap));
@@ -1717,6 +1750,7 @@
 	      if (option.id.startsWith("tracker")) {
 	        if (settingsMap.hasOwnProperty(option.id)) {
 	          settingsMap[option.id].isTrue = option.isTrue;
+	          settingsMap[option.id].trackStyle = option.trackStyle || "auto";
 	          settingsMap[option.id].r = option.r;
 	          settingsMap[option.id].g = option.g;
 	          settingsMap[option.id].b = option.b;
@@ -1777,8 +1811,113 @@
 	document.head.appendChild(style);
 
 	function changeColorAlpha(rgba, alpha) {
-	  return rgba.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+	  if (rgba.startsWith('rgba')) {
+	    return rgba.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+	  } else if (rgba.startsWith('rgb')) {
+	    return rgba.replace(/rgb\(([^,]+),([^,]+),([^,]+)\)/, `rgba($1,$2,$3,${alpha})`);
+	  } else if (rgba.startsWith('hsl')) {
+	    return rgba.replace(/hsl\(([^,]+),([^,]+),([^)]+)\)/, `hsla($1,$2,$3,${alpha})`);
+	  } else if (rgba.startsWith('hsla')) {
+	    return rgba.replace(/hsla\(([^,]+),([^,]+),([^)]+),[^)]+\)/, `hsla($1,$2,$3,${alpha})`);
+	  }
+	  return rgba;
 	}
+	function getElementCenter(element) {
+	  const rect = element.getBoundingClientRect();
+	  if (element.innerText.trim() === '') {
+	    return {
+	      x: rect.left + rect.width / 2,
+	      y: rect.top
+	    };
+	  }
+	  return {
+	    x: rect.left + rect.width / 2,
+	    y: rect.top + rect.height / 2
+	  };
+	}
+
+	const shapes = {
+	  "circle": (ctx, p = {}) => {
+	    // {x, y, size, color}
+	    ctx.beginPath();
+	    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	    ctx.fillStyle = p.color;
+	    ctx.fill();
+	  },
+	  "rectangle": (ctx, p = {}) => {
+	    // {x, y, size, color}
+	    ctx.beginPath();
+	    ctx.fillStyle = p.color;
+	    ctx.fillRect(p.x, p.y, p.size, p.size);
+	    ctx.closePath();
+	  },
+	  "star": (ctx, p = {}) => {
+	    // {x, y, size, color, angle}
+	    ctx.save();
+	    ctx.translate(p.x, p.y);
+	    ctx.rotate(p.angle);
+	    const starSize = p.size * 10;
+	    ctx.beginPath();
+	    const startAngle = -Math.PI / 2;
+	    const startX = Math.cos(startAngle) * starSize;
+	    const startY = Math.sin(startAngle) * starSize;
+	    ctx.moveTo(startX, startY);
+	    for (let i = 0; i < 5; i++) {
+	      const outerAngle = i * 2 * Math.PI / 5 - Math.PI / 2;
+	      const innerAngle = outerAngle + Math.PI / 5;
+	      const outerX = Math.cos(outerAngle) * starSize;
+	      const outerY = Math.sin(outerAngle) * starSize;
+	      ctx.lineTo(outerX, outerY);
+	      const innerX = Math.cos(innerAngle) * (starSize / 2);
+	      const innerY = Math.sin(innerAngle) * (starSize / 2);
+	      ctx.lineTo(innerX, innerY);
+	    }
+	    ctx.closePath();
+	    ctx.fillStyle = p.color;
+	    ctx.fill();
+	    ctx.restore();
+	  },
+	  "arrow": (ctx, p = {}) => {
+	    // {x, y, size, color, velocity, arrowLength, arrowWidth, arrowHeadLength, arrowHeadWidth, fletchingLength, fletchingWidth}
+	    const length = p.size * (p.arrowLength || 6);
+	    const width = p.size * (p.arrowWidth || 0.5);
+	    const arrowHeadLength = p.size * (p.arrowHeadLength || 1.33);
+	    const arrowHeadWidth = p.size * (p.arrowHeadWidth || 0.80);
+	    const fletchingLength = p.size * (p.fletchingLength || 2.13);
+	    const fletchingWidth = p.size * (p.fletchingWidth || 1.33);
+	    ctx.save();
+	    ctx.translate(p.x, p.y);
+	    ctx.rotate(Math.atan2(p.velocity.y, p.velocity.x));
+	    // Draw arrow shaft
+	    ctx.beginPath();
+	    ctx.moveTo(-length / 2, -width / 2);
+	    ctx.lineTo(length / 2 - arrowHeadLength, -width / 2);
+	    ctx.lineTo(length / 2 - arrowHeadLength, width / 2);
+	    ctx.lineTo(-length / 2, width / 2);
+	    ctx.closePath();
+	    ctx.fillStyle = p.color;
+	    ctx.fill();
+	    // Draw arrow head
+	    ctx.beginPath();
+	    ctx.moveTo(length / 3 - arrowHeadLength, -arrowHeadWidth / 2);
+	    ctx.lineTo(length / 2, 0);
+	    ctx.lineTo(length / 3 - arrowHeadLength, arrowHeadWidth / 2);
+	    ctx.closePath();
+	    ctx.fillStyle = p.color;
+	    ctx.fill();
+	    // Draw fletchings 
+	    ctx.beginPath();
+	    ctx.moveTo(-length / 2, -width / 2);
+	    ctx.lineTo(-length / 2 - fletchingLength, -fletchingWidth / 2);
+	    ctx.lineTo(-length / 2 - fletchingLength * 0.5, 0);
+	    ctx.lineTo(-length / 2 - fletchingLength, fletchingWidth / 2);
+	    ctx.lineTo(-length / 2, width / 2);
+	    ctx.closePath();
+	    ctx.fillStyle = p.color;
+	    ctx.fill();
+	    ctx.restore();
+	  }
+	};
 
 	const onHitEffectsMap = {
 	  "smoke": {
@@ -2666,6 +2805,27 @@
 	        }
 	      }
 	    }
+	  },
+	  "pixelSmoke": {
+	    x: p => p.x + (Math.random() - 0.5) * 80,
+	    y: p => p.y + (Math.random() - 0.5) * 80,
+	    angle: p => (Math.random() - 0.5) * Math.PI / 5 * 2 - Math.PI / 2,
+	    color: p => `hsl(0, 0%, ${Math.round(Math.random() * 65 + 10)}%)`,
+	    size: p => (Math.random() * 40 + 10) * p.size,
+	    speed: p => Math.random() * 0.5 * Math.sqrt(p.size),
+	    gravity: p => -0.3 + Math.random() * 0.2 * p.size,
+	    life: p => Math.floor((Math.random() * 700 + 100) * p.size),
+	    draw: (ctx, p) => {
+	      const alpha = Math.pow(p.life / p.maxLife, 0.2);
+	      p.x += Math.cos(p.angle) * p.speed * 0.3;
+	      p.speed *= 0.992;
+	      p.y += -Math.sin(p.speed) * 0.5;
+	      p.color = changeColorAlpha(p.color, alpha);
+	      p.life -= 1;
+	      if (p.life > 0) {
+	        shapes.rectangle(ctx, p);
+	      }
+	    }
 	  }
 	};
 
@@ -2916,7 +3076,7 @@
 	    trailLength: 3,
 	    shake: true,
 	    onHit: {
-	      "tornado": size => Math.min(Math.ceil(size * 5), 8)
+	      "pixelSmoke": size => Math.min(Math.ceil(size * 80), 50)
 	    },
 	    draw: (ctx, p) => {
 	      ctx.beginPath();
@@ -3207,6 +3367,24 @@
 	  '/abilities/stunning_blow': "slash"
 	};
 
+	let activeEffects = [];
+	function addEffect({
+	  effects,
+	  active = true,
+	  lifespan = 120,
+	  color = "rgba(255, 255, 255, 0.8)",
+	  otherInfo = {}
+	}) {
+	  activeEffects.push({
+	    effects,
+	    active,
+	    life: 0,
+	    lifespan,
+	    color,
+	    otherInfo
+	  });
+	}
+
 	function applyShakeEffect(element, intensity = 1, duration = 500) {
 	  if (!element) return;
 
@@ -3291,21 +3469,167 @@
 	    });
 	  }
 	}
-	function applyDeadEffect(element) {
-	  const monsterSvg = element.querySelector(".Icon_icon__2LtL_");
-	  monsterSvg.style.transition = "transform 0.1s ease-in-out";
-	  monsterSvg.style.transformOrigin = "bottom center";
-	  monsterSvg.style.transform = "rotate(15deg)";
-	  setTimeout(() => {
-	    monsterSvg.style.transition = "transform 0.5s ease-in-out, opacity 0.5s ease-in-out";
-	    monsterSvg.style.transform = "rotate(-180deg)";
-	    monsterSvg.style.opacity = "0";
-	  }, 300);
-	  // fade out
-	  // setTimeout(() => {
-	  //     monsterSvg.style.transition = "opacity 0.5s ease-in-out";
-	  // }, 800);
-	}
+	const deathEffect = {
+	  default: element => {
+	    const monsterSvg = element.querySelector(".Icon_icon__2LtL_");
+	    monsterSvg.style.transition = "transform 0.1s ease-in-out";
+	    monsterSvg.style.transformOrigin = "bottom center";
+	    monsterSvg.style.transform = "rotate(15deg)";
+	    setTimeout(() => {
+	      monsterSvg.style.transition = "transform 0.5s ease-in-out, opacity 0.5s ease-in-out";
+	      monsterSvg.style.transform = "rotate(-180deg)";
+	      monsterSvg.style.opacity = "0";
+	    }, 300);
+	    // fade out
+	    // setTimeout(() => {
+	    //     monsterSvg.style.transition = "opacity 0.5s ease-in-out";
+	    // }, 800);
+	  },
+	  minecraftStyle: element => {
+	    const monsterSvg = element.querySelector(".Icon_icon__2LtL_");
+
+	    // First get dimensions and viewBox of original SVG
+	    const svgRect = monsterSvg.getBoundingClientRect();
+	    const viewBox = monsterSvg.getAttribute('viewBox') || '0 0 24 24'; // 默认值，以防未设置
+
+	    // Get SVG content before changing anything else
+	    const svgContent = monsterSvg.innerHTML;
+
+	    // Create container that will match exact position of original SVG
+	    const overlayContainer = document.createElement('div');
+	    overlayContainer.style.position = 'absolute';
+	    overlayContainer.style.top = '0';
+	    overlayContainer.style.left = '0';
+	    overlayContainer.style.width = '100%';
+	    overlayContainer.style.height = '100%';
+	    overlayContainer.style.pointerEvents = 'none';
+	    // overlayContainer.style.zIndex = '5';
+
+	    // Match the exact positioning and sizing of the original SVG
+	    const parentBounds = element.getBoundingClientRect();
+	    const relativeTop = (svgRect.top - parentBounds.top) / parentBounds.height * 100;
+	    const relativeLeft = (svgRect.left - parentBounds.left) / parentBounds.width * 100;
+	    const relativeWidth = svgRect.width / parentBounds.width * 100;
+	    const relativeHeight = svgRect.height / parentBounds.height * 100;
+
+	    // Create SVG overlay with the same dimensions and position
+	    const svgOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	    svgOverlay.setAttribute('width', '100%');
+	    svgOverlay.setAttribute('height', '100%');
+	    svgOverlay.setAttribute('viewBox', viewBox);
+	    svgOverlay.style.position = 'absolute';
+	    svgOverlay.style.top = `${relativeTop}%`;
+	    svgOverlay.style.left = `${relativeLeft}%`;
+	    svgOverlay.style.width = `${relativeWidth}%`;
+	    svgOverlay.style.height = `${relativeHeight}%`;
+	    setTimeout(() => {
+	      // Apply rotation to original SVG
+	      monsterSvg.style.transition = "transform 0.1s ease-in-out";
+	      monsterSvg.style.transformOrigin = "center left";
+	      monsterSvg.style.transform = "rotate(15deg)";
+	      // Apply same transform as original to maintain alignment
+	      svgOverlay.style.transition = "transform 0.1s ease-in-out";
+	      svgOverlay.style.transform = "rotate(15deg)";
+	      svgOverlay.style.transformOrigin = "center left";
+	    }, 300);
+
+	    // Create defs for the mask
+	    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+	    const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+	    mask.setAttribute('id', `monster-mask-${Date.now()}`); // Unique ID
+
+	    // Clone the original SVG content for the mask
+	    const maskContent = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+	    maskContent.innerHTML = svgContent;
+
+	    // Set all elements in mask to white (opaque parts of mask)
+	    const maskElements = maskContent.querySelectorAll('*');
+	    maskElements.forEach(el => {
+	      if (el.tagName === 'path' || el.tagName === 'circle' || el.tagName === 'rect' || el.tagName === 'polygon' || el.tagName === 'polyline') {
+	        el.setAttribute('fill', 'white');
+	        el.setAttribute('stroke', 'white');
+	      }
+	    });
+	    mask.appendChild(maskContent);
+	    defs.appendChild(mask);
+	    svgOverlay.appendChild(defs);
+
+	    // Create the red overlay rectangle that will be masked
+	    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+	    rect.setAttribute('width', '100%');
+	    rect.setAttribute('height', '100%');
+	    rect.setAttribute('fill', 'rgba(255, 0, 0, 0.6)'); // slightly more opaque
+	    rect.setAttribute('mask', `url(#${mask.id})`);
+	    svgOverlay.appendChild(rect);
+	    overlayContainer.appendChild(svgOverlay);
+
+	    // Add to parent element (usually the monster container)
+	    element.style.position = 'relative'; // Ensure positioning context
+	    element.appendChild(overlayContainer);
+	    const svgCenter = getElementCenter(element);
+
+	    // Make overlay match any subsequent animations of the original SVG
+	    const observer = new MutationObserver(mutations => {
+	      mutations.forEach(mutation => {
+	        if (mutation.attributeName === 'style' || mutation.attributeName === 'transform') {
+	          // Copy transform properties to keep in sync
+	          svgOverlay.style.transform = monsterSvg.style.transform;
+	          svgOverlay.style.opacity = monsterSvg.style.opacity;
+	          svgOverlay.style.transition = monsterSvg.style.transition;
+	        }
+	      });
+	    });
+
+	    // Start observing the original SVG for changes
+	    observer.observe(monsterSvg, {
+	      attributes: true,
+	      attributeFilter: ['style', 'transform']
+	    });
+
+	    // Fade out after delay
+	    setTimeout(() => {
+	      // monsterSvg.style.transition = "opacity 0.5s ease-in-out";
+	      monsterSvg.style.opacity = "0";
+
+	      // Remove overlay and stop observer after animation
+	      observer.disconnect();
+	      overlayContainer.remove();
+	      let effects = [];
+	      const p = {
+	        x: svgCenter.x,
+	        y: svgCenter.y + 30,
+	        color: "rgba(0, 0, 0, 0.6)",
+	        size: 0.2
+	      };
+	      for (let i = 0; i < 25; i++) {
+	        p.life = onHitEffectsMap.pixelSmoke.life({
+	          size: 0.5
+	        });
+	        effects.push({
+	          x: onHitEffectsMap.pixelSmoke.x(p),
+	          y: onHitEffectsMap.pixelSmoke.y(p),
+	          angle: onHitEffectsMap.pixelSmoke.angle(p),
+	          color: onHitEffectsMap.pixelSmoke.color(p),
+	          size: onHitEffectsMap.pixelSmoke.size(p),
+	          speed: onHitEffectsMap.pixelSmoke.speed({
+	            size: 5
+	          }),
+	          gravity: onHitEffectsMap.pixelSmoke.gravity(p),
+	          life: p.life,
+	          maxLife: p.life,
+	          draw: onHitEffectsMap.pixelSmoke.draw
+	        });
+	      }
+
+	      // Add particle effect
+	      addEffect({
+	        effects: effects,
+	        active: true,
+	        lifespan: 500
+	      });
+	    }, 1000);
+	  }
+	};
 
 	const canvas = initTrackerCanvas();
 	const ctx = canvas.getContext('2d');
@@ -3386,6 +3710,7 @@
 	    };
 	    this.otherInfo = otherInfo;
 	    this.shakeApplied = false;
+	    this.life = 0;
 	    this.type = otherInfo.type || 'default';
 	    this.effect = projectileEffectsMap[this.type] || projectileEffectsMap['fireball'];
 	    this.doShake = this.effect.shake;
@@ -3432,6 +3757,7 @@
 	  update() {
 	    // 更新速度 (考虑重力)
 	    this.velocity.y += this.gravity;
+	    this.life += 1;
 
 	    // 更新位置
 	    this.x += this.velocity.x;
@@ -3476,6 +3802,9 @@
 	    }
 	  }
 	  isArrived() {
+	    if (this.life >= this.timeInAir) {
+	      return true;
+	    }
 	    // 判断是否到达目标点 (调整判定距离)
 	    const arrivalDistance = 20;
 	    const hasArrived = Math.hypot(this.x - this.target.x, this.y - this.target.y) < arrivalDistance;
@@ -3493,9 +3822,6 @@
 
 	// Projectiles管理
 	let projectiles = [];
-
-	// 存储所有活跃的爆炸效果
-	let activeOnHitAnimation = [];
 
 	// 爆炸效果函数
 	function createOnHitEffect(projectile) {
@@ -3551,22 +3877,21 @@
 	  const onHitEffectData = {
 	    effects: [...effects],
 	    active: true,
-	    count: 0,
-	    maxCount: lifeSpan,
+	    lifespan: lifeSpan,
 	    color: color,
 	    otherInfo: otherInfo
 	  };
-	  activeOnHitAnimation.push(onHitEffectData);
+	  addEffect(onHitEffectData);
 	}
 
 	// 更新和渲染所有命中效果
 	function updateOnHits() {
 	  // 遍历所有活跃的命中
-	  for (let i = activeOnHitAnimation.length - 1; i >= 0; i--) {
-	    const effect = activeOnHitAnimation[i];
-	    effect.count++;
-	    if (effect.count >= effect.maxCount) {
-	      activeOnHitAnimation.splice(i, 1);
+	  for (let i = activeEffects.length - 1; i >= 0; i--) {
+	    const effect = activeEffects[i];
+	    effect.life++;
+	    if (effect.life >= effect.lifespan) {
+	      activeEffects.splice(i, 1);
 	      continue;
 	    }
 	    ctx.save();
@@ -3577,7 +3902,7 @@
 	    });
 
 	    // 伤害文本
-	    if (effect.otherInfo.damage) {
+	    if (effect.otherInfo && effect.otherInfo.damage) {
 	      const fontSizeScale = settingsMap.damageTextScale.value || 1;
 	      const fontSizeLimit = settingsMap.damageTextSizeLimit.value || 70;
 	      const fontAlpha = settingsMap.damageTextAlpha.value || 0.8;
@@ -3640,7 +3965,7 @@
 	      addDamageHPBar(endElement, damage);
 	    }
 	    if (otherInfo.isKill && settingsMap.monsterDeadAnimation.value) {
-	      applyDeadEffect(otherInfo.endElement);
+	      deathEffect[settingsMap.monsterDeadAnimationStyle.value](otherInfo.endElement);
 	    }
 	    const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
 	    projectiles.push(projectile);
@@ -3648,22 +3973,12 @@
 	    projectiles.shift();
 	  }
 	}
-	function getElementCenter(element) {
-	  const rect = element.getBoundingClientRect();
-	  if (element.innerText.trim() === '') {
-	    return {
-	      x: rect.left + rect.width / 2,
-	      y: rect.top
-	    };
-	  }
-	  return {
-	    x: rect.left + rect.width / 2,
-	    y: rect.top + rect.height / 2
-	  };
-	}
 
 	// #region Setting
-	waitForSetttins();
+	waitForSettings({
+	  monsterDeadAnimationStyle: Object.keys(deathEffect),
+	  allProjectiles: Object.keys(projectileEffectsMap)
+	});
 	hookWS();
 
 	// #region Hook WS
@@ -3891,11 +4206,11 @@
 	  isKill = false
 	}) {
 	  if (reversed) {
-	    if (!settingsMap.tracker6.isTrue) {
+	    if (settingsMap.tracker6 && !settingsMap.tracker6.isTrue) {
 	      return null;
 	    }
 	  } else {
-	    if (!settingsMap["tracker" + from].isTrue) {
+	    if (settingsMap["tracker" + from] && !settingsMap["tracker" + from].isTrue) {
 	      return null;
 	    }
 	  }
@@ -3910,6 +4225,13 @@
 	    const effectTo = toPlayer ? playersContainer.children[to] : monsterContainer.children[to];
 	    const trackerSetting = reversed ? settingsMap[`tracker6`] : settingsMap["tracker" + from];
 	    let lineColor = "rgba(" + trackerSetting.r + ", " + trackerSetting.g + ", " + trackerSetting.b + ", 1)";
+	    if (["selfHeal", "selfManaRegen", "heal"].indexOf(abilityHrid) <= -1) {
+	      if (trackerSetting.trackStyle === "null") {
+	        return null;
+	      } else if (trackerSetting.trackStyle != "auto") {
+	        abilityHrid = trackerSetting.trackStyle;
+	      }
+	    }
 	    if (!reversed) {
 	      createProjectile(effectFrom, effectTo, lineColor, 1, hpDiff, abilityHrid, isCrit, isKill);
 	    } else {
@@ -3921,4 +4243,10 @@
 	// 启动动画
 	animate();
 
-})();
+	exports.registProjectile = registProjectile;
+
+	Object.defineProperty(exports, '__esModule', { value: true });
+
+	return exports;
+
+})({});

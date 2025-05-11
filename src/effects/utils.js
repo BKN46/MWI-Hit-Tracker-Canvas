@@ -1,5 +1,14 @@
 export function changeColorAlpha(rgba, alpha) {
-  return rgba.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+  if (rgba.startsWith('rgba')) {
+    return rgba.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+  } else if (rgba.startsWith('rgb')) {
+    return rgba.replace(/rgb\(([^,]+),([^,]+),([^,]+)\)/, `rgba($1,$2,$3,${alpha})`);
+  } else if (rgba.startsWith('hsl')) {
+    return rgba.replace(/hsl\(([^,]+),([^,]+),([^)]+)\)/, `hsla($1,$2,$3,${alpha})`);
+  } else if (rgba.startsWith('hsla')) {
+    return rgba.replace(/hsla\(([^,]+),([^,]+),([^)]+),[^)]+\)/, `hsla($1,$2,$3,${alpha})`);
+  }
+  return rgba;
 }
 
 export function getElementCenter(element) {

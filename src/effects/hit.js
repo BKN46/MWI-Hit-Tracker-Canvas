@@ -1,4 +1,5 @@
 import { changeColorAlpha } from "./utils.js";
+import { shapes } from "./shape.js";
 
 export const onHitEffectsMap = {
     "smoke": {
@@ -195,76 +196,76 @@ export const onHitEffectsMap = {
         }
     },
     "slash": {
-            // Main slash effect
-            x: p => p.x,
-            y: p => p.y,
-            angle: p => Math.random() * Math.PI * 2,
-            size: p => 3 * p.size,
-            life: p => 300 * p.size, 
-            draw: (ctx, p) => {
-                if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
-                if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
-                p.life -= 2; // Even slower fade
-                
-                if (p.life > 0) {
-                    const alpha = p.life / 300 * p.size;
-                    ctx.save();
-                    ctx.translate(p.x, p.y);
-                    ctx.rotate(p.angle);
+        // Main slash effect
+        x: p => p.x,
+        y: p => p.y,
+        angle: p => Math.random() * Math.PI * 2,
+        size: p => 3 * p.size,
+        life: p => 300 * p.size, 
+        draw: (ctx, p) => {
+            if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
+            if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
+            p.life -= 2; // Even slower fade
+            
+            if (p.life > 0) {
+                const alpha = p.life / 300 * p.size;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
 
-                    // Draw main slash line with improved tapered shape
-                    ctx.beginPath();
-                    ctx.moveTo(-p.length/2, 0);
-                    ctx.quadraticCurveTo(
-                        -p.length/4, -p.maxWidth * 0.6,
-                        -p.length/6, -p.maxWidth
-                    );
-                    ctx.lineTo(p.length/6, -p.maxWidth);
-                    ctx.quadraticCurveTo(
-                        p.length/4, -p.maxWidth * 0.6,
-                        p.length/2, 0
-                    );
-                    ctx.quadraticCurveTo(
-                        p.length/4, p.maxWidth * 0.6,
-                        p.length/6, p.maxWidth
-                    );
-                    ctx.lineTo(-p.length/6, p.maxWidth);
-                    ctx.quadraticCurveTo(
-                        -p.length/4, p.maxWidth * 0.6,
-                        -p.length/2, 0
-                    );
-                    ctx.closePath();
-                    ctx.fillStyle = p.color.replace('0.9', alpha.toString());
-                    ctx.fill();
+                // Draw main slash line with improved tapered shape
+                ctx.beginPath();
+                ctx.moveTo(-p.length/2, 0);
+                ctx.quadraticCurveTo(
+                    -p.length/4, -p.maxWidth * 0.6,
+                    -p.length/6, -p.maxWidth
+                );
+                ctx.lineTo(p.length/6, -p.maxWidth);
+                ctx.quadraticCurveTo(
+                    p.length/4, -p.maxWidth * 0.6,
+                    p.length/2, 0
+                );
+                ctx.quadraticCurveTo(
+                    p.length/4, p.maxWidth * 0.6,
+                    p.length/6, p.maxWidth
+                );
+                ctx.lineTo(-p.length/6, p.maxWidth);
+                ctx.quadraticCurveTo(
+                    -p.length/4, p.maxWidth * 0.6,
+                    -p.length/2, 0
+                );
+                ctx.closePath();
+                ctx.fillStyle = p.color.replace('0.9', alpha.toString());
+                ctx.fill();
 
-                    // Enhanced glow effect
-                    ctx.beginPath();
-                    ctx.moveTo(-p.length/2, 0);
-                    ctx.quadraticCurveTo(
-                        -p.length/4, -p.maxWidth * 0.8,
-                        -p.length/6, -p.maxWidth * 1.5
-                    );
-                    ctx.lineTo(p.length/6, -p.maxWidth * 1.5);
-                    ctx.quadraticCurveTo(
-                        p.length/4, -p.maxWidth * 0.8,
-                        p.length/2, 0
-                    );
-                    ctx.quadraticCurveTo(
-                        p.length/4, p.maxWidth * 0.8,
-                        p.length/6, p.maxWidth * 1.5
-                    );
-                    ctx.lineTo(-p.length/6, p.maxWidth * 1.5);
-                    ctx.quadraticCurveTo(
-                        -p.length/4, p.maxWidth * 0.8,
-                        -p.length/2, 0
-                    );
-                    ctx.closePath();
-                    ctx.fillStyle = p.color.replace('0.9', (alpha * 0.3).toString());
-                    ctx.fill();
+                // Enhanced glow effect
+                ctx.beginPath();
+                ctx.moveTo(-p.length/2, 0);
+                ctx.quadraticCurveTo(
+                    -p.length/4, -p.maxWidth * 0.8,
+                    -p.length/6, -p.maxWidth * 1.5
+                );
+                ctx.lineTo(p.length/6, -p.maxWidth * 1.5);
+                ctx.quadraticCurveTo(
+                    p.length/4, -p.maxWidth * 0.8,
+                    p.length/2, 0
+                );
+                ctx.quadraticCurveTo(
+                    p.length/4, p.maxWidth * 0.8,
+                    p.length/6, p.maxWidth * 1.5
+                );
+                ctx.lineTo(-p.length/6, p.maxWidth * 1.5);
+                ctx.quadraticCurveTo(
+                    -p.length/4, p.maxWidth * 0.8,
+                    -p.length/2, 0
+                );
+                ctx.closePath();
+                ctx.fillStyle = p.color.replace('0.9', (alpha * 0.3).toString());
+                ctx.fill();
 
-                    ctx.restore();
-                }
+                ctx.restore();
             }
+        }
     },
     "slashParticle": {
         // Enhanced particle effect for slash
@@ -931,5 +932,27 @@ export const onHitEffectsMap = {
                 }
             }
         }
-    }
+    },
+    "pixelSmoke": {
+        x: (p) => p.x + (Math.random() - 0.5) * 80,
+        y: (p) => p.y + (Math.random() - 0.5) * 80,
+        angle: (p) => (Math.random() - 0.5) * Math.PI/5*2 - Math.PI/2,
+        color: (p) => `hsl(0, 0%, ${Math.round(Math.random() * 65 + 10)}%)`,
+        size: (p) => (Math.random() * 40 + 10) * p.size,
+        speed: (p) => (Math.random() * 0.5) * Math.sqrt(p.size),
+        gravity: (p) => -0.3 + Math.random() * 0.2 * p.size,
+        life: (p) => Math.floor((Math.random() * 700 + 100) * p.size),
+        draw: (ctx, p) => {
+            const alpha = Math.pow(p.life / p.maxLife, 0.2);
+            p.x += Math.cos(p.angle) * p.speed * 0.3;
+            p.speed *= 0.992
+            p.y += -Math.sin(p.speed) * 0.5;
+            p.color = changeColorAlpha(p.color, alpha);
+            p.life -= 1;
+
+            if (p.life > 0) {
+                shapes.rectangle(ctx, p)
+            }
+        }
+    },
 }

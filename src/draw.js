@@ -3,7 +3,7 @@ import { abilityEffectsMap } from "./effects/abilities.js";
 import { onHitEffectsMap } from "./effects/hit.js";
 import { settingsMap } from "./setting.js";
 import { getElementCenter } from "./effects/utils.js";
-import { applyShakeEffect, addDamageHPBar, applyDeadEffect } from "./effects/domEffect.js";
+import { applyShakeEffect, addDamageHPBar, deathEffect } from "./effects/domEffect.js";
 import { addEffect, activeEffects } from "./effects/manager.js";
 
 const canvas = initTrackerCanvas();
@@ -85,6 +85,7 @@ class Projectile {
         this.target = { x: endX, y: endY };
         this.otherInfo = otherInfo;
         this.shakeApplied = false;
+        this.life = 0;
 
         this.type = otherInfo.type || 'default';
         this.effect = projectileEffectsMap[this.type] || projectileEffectsMap['fireball'];
@@ -134,6 +135,7 @@ class Projectile {
     update() {
         // 更新速度 (考虑重力)
         this.velocity.y += this.gravity;
+        this.life += 1;
         
         // 更新位置
         this.x += this.velocity.x;
@@ -180,6 +182,9 @@ class Projectile {
     }
 
     isArrived() {
+        if (this.life >= this.timeInAir) {
+            return true;
+        }
         // 判断是否到达目标点 (调整判定距离)
         const arrivalDistance = 20;
         const hasArrived = Math.hypot(this.x - this.target.x, this.y - this.target.y) < arrivalDistance;
@@ -211,7 +216,6 @@ function createOnHitEffect(projectile) {
     const projectileScale = settingsMap.projectileScale.value || 1;
 
     // Resize for onHit effect
-    const sizeScale = 
     projectile.size = Math.max(1, Math.min(100, projectile.size)) / 20 / projectileScale;
 
     const sizeFactor = settingsMap.onHitScale.value || 1;
@@ -261,12 +265,11 @@ function createOnHitEffect(projectile) {
     const onHitEffectData = {
         effects: [...effects],
         active: true,
-        count: 0,
         lifespan: lifeSpan,
         color: color,
         otherInfo: otherInfo,
     };
-    
+ 
     addEffect(onHitEffectData);
 }
 
@@ -275,9 +278,9 @@ function updateOnHits() {
     // 遍历所有活跃的命中
     for (let i = activeEffects.length - 1; i >= 0; i--) {
         const effect = activeEffects[i];
-        effect.count++;
+        effect.life++;
 
-        if (effect.count >= effect.lifespan) {
+        if (effect.life >= effect.lifespan) {
             activeEffects.splice(i, 1);
             continue;
         }
@@ -290,7 +293,7 @@ function updateOnHits() {
         });
 
         // 伤害文本
-        if (effect.otherInfo.damage) {
+        if (effect.otherInfo && effect.otherInfo.damage) {
             const fontSizeScale = settingsMap.damageTextScale.value || 1;
             const fontSizeLimit = settingsMap.damageTextSizeLimit.value || 70;
             const fontAlpha = settingsMap.damageTextAlpha.value || 0.8;
@@ -361,7 +364,7 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
             addDamageHPBar(endElement, damage);
         }
         if (otherInfo.isKill && settingsMap.monsterDeadAnimation.value) {
-            applyDeadEffect(otherInfo.endElement);
+            deathEffect[settingsMap.monsterDeadAnimationStyle.value](otherInfo.endElement);
         }
         const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
         projectiles.push(projectile);
