@@ -223,7 +223,7 @@ function handleMessage(message) {
 // #region Main Logic
 
 // 动画效果
-function registProjectile({
+export function registProjectile({
     from,
     to,
     hpDiff,
@@ -234,11 +234,11 @@ function registProjectile({
     isKill = false,
 }) {
     if (reversed){
-        if (!settingsMap.tracker6.isTrue) {
+        if (settingsMap.tracker6 && !settingsMap.tracker6.isTrue) {
             return null;
         }
     } else {
-        if (!settingsMap["tracker"+from].isTrue) {
+        if (settingsMap["tracker"+from] && !settingsMap["tracker"+from].isTrue) {
             return null;
         }
     }
