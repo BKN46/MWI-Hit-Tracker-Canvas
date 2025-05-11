@@ -864,5 +864,122 @@ export const onHitEffectsMap = {
                 }
             });
         }
+    },
+    "tornado": {
+        x: (p) => p.x,
+        y: (p) => p.y + 20,
+        size: (p) => 3 * p.size,
+        life: (p) => 1250 * p.size,
+        speed: (p) => (Math.random() * 3 + 1) * Math.sqrt(p.size),
+        gravity: (p) => 0.12,
+        draw: (ctx, p) => {
+            if (!p.initialized) {
+                p.initialized = true;
+                p.particles = [];
+                p.maxParticles = 6;
+                p.amplitude = 60 * p.size;
+                p.frequency = 15;
+                p.timeSpeed = 0.8;
+                p.maxHeight = 100;
+                
+                // Parse the base color once
+                const colorMatch = p.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+                if (colorMatch) {
+                    p.baseColor = {
+                        r: parseInt(colorMatch[1]),
+                        g: parseInt(colorMatch[2]),
+                        b: parseInt(colorMatch[3])
+                    };
+                }
+                
+                // Initialize particles with staggered heights
+                for (let i = 0; i < p.maxParticles; i++) {
+                    const startAngle = Math.random() * Math.PI * 2;
+                    const startRadius = Math.random() * 40 * p.size;
+                    p.particles.push({
+                        angle: startAngle,
+                        radius: Math.random() * 150 + 5,
+                        height: (i / p.maxParticles) * p.maxHeight,
+                        speed: Math.random() * 0.04 + 0.01,
+                        size: Math.random() * 3 + 2,
+                        baseSpeed: Math.random() * 0.04 + 0.01,
+                        startX: Math.cos(startAngle) * startRadius,
+                        startY: Math.sin(startAngle) * startRadius,
+                        initialSize: Math.random() * 3 + 2,
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() - 0.5) * 0.02,
+                        sway: (Math.random() - 0.5) * 0.2,
+                        swaySpeed: (Math.random() - 0.5) * 0.02
+                    });
+                }
+            }
+
+            p.life -= 3;
+
+            if (p.life > 0) {
+                const alpha = p.life;
+                
+                for (let particle of p.particles) {
+                    const heightRatio = particle.height / p.maxHeight;
+                    const currentSpeed = particle.baseSpeed * Math.pow(1 - heightRatio, 3);
+                    
+                    particle.angle += p.frequency * currentSpeed * p.timeSpeed;
+                    particle.radius += (Math.random() - 0.5) * 0.5;
+                    particle.height += 1.5 * p.timeSpeed;
+
+                    // Add leaf-like movement
+                    particle.rotation += particle.rotationSpeed;
+                    if (particle.sway !== undefined) {
+                        particle.startX += Math.sin(particle.height * particle.swaySpeed) * particle.sway;
+                    }
+
+                    if (particle.height > p.maxHeight) {
+                        particle.height = 0;
+                        const startAngle = Math.random() * Math.PI * 2;
+                        const startRadius = Math.random() * 40 * p.size;
+                        particle.startX = Math.cos(startAngle) * startRadius;
+                        particle.startY = Math.sin(startAngle) * startRadius;
+                        particle.angle = startAngle;
+                        particle.initialSize = Math.random() * 3 + 2;
+                        particle.rotation = Math.random() * Math.PI * 2;
+                        particle.rotationSpeed = (Math.random() - 0.5) * 0.02;
+                        particle.sway = (Math.random() - 0.5) * 0.2;
+                        particle.swaySpeed = (Math.random() - 0.5) * 0.02;
+                    }
+
+                    const spiral = (particle.height / p.maxHeight) * p.amplitude;
+                    const x = p.x + particle.startX + Math.cos(particle.angle) * spiral;
+                    const y = p.y - particle.height + particle.startY;
+
+                    // Calculate current size based on height and apply size limit
+                    const currentSize = Math.min(
+                        particle.initialSize * (1 - heightRatio * 0.7) * p.size,
+                        Math.min(Math.ceil(p.size * 6), 10)
+                    );
+
+                    // Calculate gradient color based on height
+                    const gradientFactor = heightRatio * 1; // 100% 上面白
+                    const r = Math.min(255, p.baseColor.r + (255 - p.baseColor.r) * gradientFactor);
+                    const g = Math.min(255, p.baseColor.g + (255 - p.baseColor.g) * gradientFactor);
+                    const b = Math.min(255, p.baseColor.b + (255 - p.baseColor.b) * gradientFactor);
+
+                    // Draw main particle with size reduction
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(particle.rotation);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, currentSize, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha * 0.8})`;
+                    ctx.fill();
+
+                    // Add glow effect with size reduction
+                    ctx.beginPath();
+                    ctx.arc(0, 0, currentSize * 1.5, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha * 0.3})`;
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+        }
     }
 }
