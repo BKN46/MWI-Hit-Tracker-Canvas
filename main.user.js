@@ -2206,6 +2206,388 @@
 	        ctx.restore();
 	      }
 	    }
+	  },
+	  "pierce": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => 5 * p.size,
+	    life: p => 1200 * p.size,
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.pierceLength = p.size * 12;
+	        p.time = 0;
+	        p.ripples = [];
+	        // Create initial ripples
+	        for (let i = 0; i < 3; i++) {
+	          p.ripples.push({
+	            radius: 0,
+	            speed: 0.5 + i * 0.2,
+	            opacity: 0.6 - i * 0.15,
+	            width: 2 - i * 0.5
+	          });
+	        }
+	      }
+	      p.life -= 2;
+	      p.time += 0.1;
+	      const alpha = p.life / 1200;
+	      if (p.life > 0) {
+	        ctx.save();
+	        ctx.translate(p.x, p.y);
+
+	        // Draw dynamic ripples
+	        p.ripples.forEach(ripple => {
+	          ripple.radius += ripple.speed;
+	          const rippleAlpha = ripple.opacity * alpha * (1 - ripple.radius / (p.size * 8));
+	          if (rippleAlpha > 0.01) {
+	            ctx.beginPath();
+	            ctx.strokeStyle = p.color.replace('0.8', rippleAlpha.toString());
+	            ctx.lineWidth = ripple.width;
+	            ctx.arc(0, 0, ripple.radius, 0, Math.PI * 2);
+	            ctx.stroke();
+	          }
+	        });
+
+	        // Draw diamond shape
+	        ctx.beginPath();
+
+	        // Top point
+	        ctx.moveTo(0, -p.pierceLength / 8);
+
+	        // Right point
+	        ctx.lineTo(p.pierceLength / 1.2, 0);
+
+	        // Bottom point
+	        ctx.lineTo(0, p.pierceLength / 8);
+
+	        // Left point
+	        ctx.lineTo(-p.pierceLength / 1.2, 0);
+
+	        // Close the shape
+	        ctx.closePath();
+
+	        // Add main fill with enhanced opacity
+	        ctx.fillStyle = p.color.replace('0.8', (alpha * 0.9).toString());
+	        ctx.fill();
+
+	        // Add highlight effect
+	        const highlightGradient = ctx.createLinearGradient(0, -p.pierceLength / 8, 0, p.pierceLength / 8);
+	        highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.3})`);
+	        highlightGradient.addColorStop(0.5, `rgba(255, 255, 255, ${alpha * 0.1})`);
+	        highlightGradient.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.3})`);
+	        ctx.fillStyle = highlightGradient;
+	        ctx.fill();
+
+	        // Add edge glow
+	        ctx.strokeStyle = p.color.replace('0.8', (alpha * 0.4).toString());
+	        ctx.lineWidth = 2;
+	        ctx.stroke();
+
+	        // Add energy particles at the corners
+	        const corners = [{
+	          x: 0,
+	          y: -p.pierceLength / 8
+	        }, {
+	          x: p.pierceLength / 1.2,
+	          y: 0
+	        }, {
+	          x: 0,
+	          y: p.pierceLength / 8
+	        }, {
+	          x: -p.pierceLength / 1.2,
+	          y: 0
+	        }];
+	        corners.forEach(corner => {
+	          ctx.beginPath();
+	          ctx.arc(corner.x, corner.y, p.size * 0.3, 0, Math.PI * 2);
+	          ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.4})`;
+	          ctx.fill();
+	        });
+	        ctx.restore();
+	      }
+	    }
+	  },
+	  "poison": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => 5 * p.size,
+	    // Increased base size
+	    life: p => 1500 * p.size,
+	    // Longer lifetime
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.bubbles = [];
+	        for (let i = 0; i < 8; i++) {
+	          // More bubbles
+	          p.bubbles.push({
+	            x: p.x + (Math.random() - 0.5) * p.size * 4,
+	            // Wider spread
+	            y: p.y + (Math.random() - 0.5) * p.size * 4,
+	            size: p.size * (Math.random() * 1.2 + 1.2),
+	            // Bigger bubbles
+	            speed: Math.random() * 0.8 + 0.4,
+	            // Faster rise
+	            wobble: Math.random() * Math.PI * 2,
+	            // For side-to-side movement
+	            wobbleSpeed: Math.random() * 0.05 + 0.02
+	          });
+	        }
+	      }
+	      p.life -= 2;
+	      const alpha = p.life / 1500;
+	      if (p.life > 0) {
+	        // Draw main poison cloud
+	        ctx.beginPath();
+	        ctx.arc(p.x, p.y, p.size * (1 - alpha) * 1.5, 0, Math.PI * 2);
+	        ctx.fillStyle = p.color.replace('0.8', (alpha * 0.5).toString());
+	        ctx.fill();
+
+	        // Draw and update bubbles
+	        p.bubbles.forEach(bubble => {
+	          bubble.y -= bubble.speed;
+	          bubble.wobble += bubble.wobbleSpeed;
+	          bubble.x += Math.sin(bubble.wobble) * 0.5;
+	          ctx.beginPath();
+	          ctx.arc(bubble.x, bubble.y, bubble.size, 0, Math.PI * 2);
+	          ctx.fillStyle = p.color.replace('0.8', (alpha * 0.7).toString());
+	          ctx.fill();
+
+	          // Add bubble highlight
+	          ctx.beginPath();
+	          ctx.arc(bubble.x - bubble.size * 0.3, bubble.y - bubble.size * 0.3, bubble.size * 0.3, 0, Math.PI * 2);
+	          ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.3})`;
+	          ctx.fill();
+	        });
+	      }
+	    }
+	  },
+	  "ice": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => (2 * Math.random() + 3) * p.size,
+	    life: p => 1500 * p.size,
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.crystals = [];
+	        const crystalCount = 14;
+	        for (let i = 0; i < crystalCount; i++) {
+	          const angle = i / crystalCount * Math.PI * 2;
+	          const angleVariation = (Math.random() - 0.5) * 0.3;
+	          const finalAngle = angle + angleVariation;
+	          p.crystals.push({
+	            x: p.x,
+	            y: p.y,
+	            angle: finalAngle,
+	            speed: (Math.random() * 1.5 + 1) * Math.sqrt(p.size),
+	            size: p.size * (Math.random() * 1.2 + 1.5),
+	            length: p.size * (Math.random() * 5 + 4),
+	            life: 1500 * p.size
+	          });
+	        }
+	      }
+	      p.life -= 1;
+	      p.crystals.forEach(crystal => {
+	        crystal.speed *= 0.96;
+	        crystal.x += Math.cos(crystal.angle) * crystal.speed;
+	        crystal.y += Math.sin(crystal.angle) * crystal.speed;
+	        crystal.life -= 1;
+	        const lifeRatio = crystal.life / (1500 * p.size);
+	        const alpha = Math.pow(lifeRatio, 1.5) * 0.8;
+	        if (crystal.life > 0) {
+	          ctx.save();
+	          ctx.translate(crystal.x, crystal.y);
+	          ctx.rotate(crystal.angle + Math.PI / 2);
+
+	          // Draw base crystal
+	          ctx.beginPath();
+	          ctx.moveTo(0, -crystal.length / 2);
+	          ctx.lineTo(crystal.size / 2, 0);
+	          ctx.lineTo(0, crystal.length / 2);
+	          ctx.lineTo(-crystal.size / 2, 0);
+	          ctx.closePath();
+	          ctx.fillStyle = p.color.replace('0.8', (alpha * 0.6).toString());
+	          ctx.fill();
+	          ctx.strokeStyle = p.color.replace('0.8', (alpha * 0.8).toString());
+	          ctx.lineWidth = 2;
+	          ctx.stroke();
+
+	          // Add white glow
+	          ctx.beginPath();
+	          ctx.moveTo(0, -crystal.length / 2);
+	          ctx.lineTo(crystal.size / 2, 0);
+	          ctx.lineTo(0, crystal.length / 2);
+	          ctx.lineTo(-crystal.size / 2, 0);
+	          ctx.closePath();
+
+	          // Create gradient for glow
+	          const gradient = ctx.createLinearGradient(0, -crystal.length / 2, 0, crystal.length / 2);
+	          gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.8})`);
+	          gradient.addColorStop(0.5, `rgba(255, 255, 255, ${alpha * 0.4})`);
+	          gradient.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.8})`);
+	          ctx.fillStyle = gradient;
+	          ctx.fill();
+
+	          // Add shiny highlight
+	          ctx.beginPath();
+	          ctx.moveTo(-crystal.size / 4, -crystal.length / 4);
+	          ctx.lineTo(crystal.size / 4, -crystal.length / 4);
+	          ctx.lineTo(0, 0);
+	          ctx.closePath();
+	          const highlightGradient = ctx.createLinearGradient(-crystal.size / 4, -crystal.length / 4, 0, 0);
+	          highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
+	          highlightGradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+	          ctx.fillStyle = highlightGradient;
+	          ctx.fill();
+	          ctx.restore();
+	        }
+	      });
+	    }
+	  },
+	  "lava": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => (2 * Math.random() + 5) * p.size,
+	    life: p => 1800 * p.size,
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.particles = [];
+
+	        // Particle configuration
+	        const particleCount = 8;
+	        const baseSize = (Math.random() * 3 + 2.2) * p.size;
+	        const sizeVariation = Math.random() * 0.4 + 0.8;
+	        const numPoints = 16;
+
+	        // Create particles
+	        for (let i = 0; i < particleCount; i++) {
+	          // Calculate particle properties
+	          const downwardAngle = -Math.PI / 2;
+	          const maxSpreadAngle = Math.PI / 4;
+	          const finalAngle = downwardAngle + (Math.random() - 0.5) * maxSpreadAngle;
+
+	          // Generate noise parameters for liquid effect
+	          const noiseOffsets = Array.from({
+	            length: numPoints
+	          }, () => Math.random() * Math.PI * 2);
+	          const noiseAmplitudes = Array.from({
+	            length: numPoints
+	          }, () => Math.random() * 0.15 + 0.85);
+	          const noiseSpeeds = Array.from({
+	            length: numPoints
+	          }, () => Math.random() * 0.03 + 0.02);
+	          p.particles.push({
+	            x: p.x + (Math.random() - 0.5) * p.size * 2,
+	            y: p.y,
+	            angle: finalAngle,
+	            speed: (Math.random() * 2 + 1.5) * Math.sqrt(p.size),
+	            size: baseSize * sizeVariation,
+	            initialSize: baseSize * sizeVariation,
+	            life: 1800 * p.size,
+	            gravity: 1.2 + (Math.random() * 0.2 - 0.1),
+	            rotation: Math.random() * Math.PI * 2,
+	            rotationSpeed: (Math.random() - 0.5) * 0.05,
+	            noiseOffsets,
+	            noiseAmplitudes,
+	            noiseSpeeds,
+	            numPoints,
+	            time: 0
+	          });
+	        }
+	      }
+	      p.life -= 2;
+
+	      // Update and draw particles
+	      p.particles.forEach(particle => {
+	        // Update particle state
+	        particle.speed *= 0.99;
+	        particle.x += Math.cos(particle.angle) * particle.speed;
+	        particle.y += Math.sin(particle.angle) * particle.speed + particle.gravity;
+	        particle.life -= 2;
+	        particle.rotation += particle.rotationSpeed;
+	        particle.time += 0.15;
+	        const lifeRatio = particle.life / (1800 * p.size);
+	        const opacity = lifeRatio * 0.7; // Reduced base opacity
+	        const sizeReduction = Math.pow(lifeRatio, 2.5);
+	        particle.size = particle.initialSize * sizeReduction;
+	        if (particle.life > 0) {
+	          ctx.save();
+	          ctx.translate(particle.x, particle.y);
+	          ctx.rotate(particle.rotation);
+
+	          // Enable blending for better transparency
+	          ctx.globalCompositeOperation = 'lighter';
+
+	          // Draw base particle shape
+	          ctx.beginPath();
+	          for (let i = 0; i < particle.numPoints; i++) {
+	            const angle = i / particle.numPoints * Math.PI * 2;
+	            const noise = Math.sin(angle + particle.noiseOffsets[i] + particle.time * particle.noiseSpeeds[i]) * particle.noiseAmplitudes[i];
+	            const surfaceTension = Math.sin(angle * 3 + particle.time * 0.5) * 0.15;
+	            const radius = particle.size * (1 + noise * 0.2 + surfaceTension);
+	            const x = Math.cos(angle) * radius;
+	            const y = Math.sin(angle) * radius;
+	            if (i === 0) {
+	              ctx.moveTo(x, y);
+	            } else {
+	              const prevAngle = (i - 1) / particle.numPoints * Math.PI * 2;
+	              const prevNoise = Math.sin(prevAngle + particle.noiseOffsets[i - 1] + particle.time * particle.noiseSpeeds[i - 1]) * particle.noiseAmplitudes[i - 1];
+	              const prevSurfaceTension = Math.sin(prevAngle * 3 + particle.time * 0.5) * 0.15;
+	              const prevRadius = particle.size * (1 + prevNoise * 0.2 + prevSurfaceTension);
+	              const prevX = Math.cos(prevAngle) * prevRadius;
+	              const prevY = Math.sin(prevAngle) * prevRadius;
+	              const cpX = (prevX + x) / 2;
+	              const cpY = (prevY + y) / 2;
+	              ctx.quadraticCurveTo(cpX, cpY, x, y);
+	            }
+	          }
+	          ctx.closePath();
+
+	          // Draw particle with glow effects
+	          // Base layer with reduced opacity
+	          ctx.fillStyle = p.color.replace('0.8', (opacity * 0.4).toString());
+	          ctx.fill();
+
+	          // Glow layers with adjusted opacity
+	          const drawGlowLayer = (radius, color, alpha) => {
+	            ctx.beginPath();
+	            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+	            ctx.fillStyle = color.replace('0.8', (opacity * alpha).toString());
+	            ctx.fill();
+	          };
+
+	          // Core and inner glow with reduced opacity
+	          drawGlowLayer(particle.size * 0.6, 'rgba(255, 255, 255, 0.8)', 0.4);
+	          drawGlowLayer(particle.size * (1.2 + Math.sin(particle.time * 0.5) * 0.2), 'rgba(255, 200, 50, 0.8)', 0.25);
+
+	          // Middle aura with softer gradient
+	          const middleGlow = ctx.createRadialGradient(0, 0, particle.size, 0, 0, particle.size * 2);
+	          middleGlow.addColorStop(0, `rgba(255, 100, 50, ${opacity * 0.2})`);
+	          middleGlow.addColorStop(0.5, `rgba(255, 50, 0, ${opacity * 0.1})`);
+	          middleGlow.addColorStop(1, `rgba(255, 0, 0, 0)`);
+	          ctx.beginPath();
+	          ctx.arc(0, 0, particle.size * 2, 0, Math.PI * 2);
+	          ctx.fillStyle = middleGlow;
+	          ctx.fill();
+
+	          // Outer aura with softer gradient
+	          const outerGlow = ctx.createRadialGradient(0, 0, particle.size * 1.5, 0, 0, particle.size * (2.5 + Math.sin(particle.time * 0.5) * 0.3));
+	          outerGlow.addColorStop(0, `rgba(255, 0, 0, ${opacity * 0.1})`);
+	          outerGlow.addColorStop(0.5, `rgba(200, 0, 0, ${opacity * 0.03})`);
+	          outerGlow.addColorStop(1, `rgba(150, 0, 0, 0)`);
+	          ctx.beginPath();
+	          ctx.arc(0, 0, particle.size * (2.5 + Math.sin(particle.time * 0.5) * 0.3), 0, Math.PI * 2);
+	          ctx.fillStyle = outerGlow;
+	          ctx.fill();
+
+	          // Reset composite operation
+	          ctx.globalCompositeOperation = 'source-over';
+	          ctx.restore();
+	        }
+	      });
+	    }
 	  }
 	};
 
@@ -2268,7 +2650,7 @@
 	    trailLength: 60,
 	    shake: true,
 	    onHit: {
-	      "leaf": size => Math.min(Math.ceil(size * 14), 30)
+	      "leaf": size => Math.min(Math.ceil(size * 30), 32)
 	    },
 	    draw: (ctx, p) => {
 	      const size = p.size * 3;
@@ -2357,8 +2739,8 @@
 	    }
 	  },
 	  'range': {
-	    speedFactor: 1.5,
-	    gravity: 0.2,
+	    speedFactor: 1.7,
+	    gravity: 0.1,
 	    trailLength: 30,
 	    shake: true,
 	    onHit: {
@@ -2366,16 +2748,67 @@
 	      "slashParticle": size => Math.min(Math.ceil(size * 8), 20)
 	    },
 	    draw: (ctx, p) => {
+	      const length = p.size * 6.65;
+	      const width = p.size * 0.47;
+	      const arrowHeadLength = p.size * 1.33;
+	      const arrowHeadWidth = p.size * 0.80;
+	      const fletchingLength = p.size * 2.13;
+	      const fletchingWidth = p.size * 1.33;
+	      ctx.save();
+	      ctx.translate(p.x, p.y);
+	      ctx.rotate(Math.atan2(p.velocity.y, p.velocity.x));
+
+	      // Draw arrow shaft
 	      ctx.beginPath();
-	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.moveTo(-length / 2, -width / 2);
+	      ctx.lineTo(length / 2 - arrowHeadLength, -width / 2);
+	      ctx.lineTo(length / 2 - arrowHeadLength, width / 2);
+	      ctx.lineTo(-length / 2, width / 2);
+	      ctx.closePath();
 	      ctx.fillStyle = p.color;
 	      ctx.fill();
+
+	      // Draw arrow head
+	      ctx.beginPath();
+	      ctx.moveTo(length / 3 - arrowHeadLength, -arrowHeadWidth / 2);
+	      ctx.lineTo(length / 2, 0);
+	      ctx.lineTo(length / 3 - arrowHeadLength, arrowHeadWidth / 2);
+	      ctx.closePath();
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+
+	      // Draw fletchings 
+	      ctx.beginPath();
+	      ctx.moveTo(-length / 2, -width / 2);
+	      ctx.lineTo(-length / 2 - fletchingLength, -fletchingWidth / 2);
+	      ctx.lineTo(-length / 2 - fletchingLength * 0.5, 0);
+	      ctx.lineTo(-length / 2 - fletchingLength, fletchingWidth / 2);
+	      ctx.lineTo(-length / 2, width / 2);
+	      ctx.closePath();
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+	      ctx.restore();
 	    },
-	    glow: (ctx, p) => {
-	      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
-	      gradient.addColorStop(0, `${p.color}`);
-	      gradient.addColorStop(1, `${p.color}`);
-	      ctx.fillStyle = gradient;
+	    trail: (ctx, p, i) => {
+	      // Only show trail after the arrow has traveled some distance
+	      const startDelay = 5; // Number of frames to wait before showing trail
+	      if (i < startDelay) return;
+	      const trailLength = p.size * 20;
+	      const trailWidth = p.size * 0.27;
+	      ctx.save();
+	      ctx.translate(p.x, p.y);
+	      ctx.rotate(Math.atan2(p.vY, p.vX));
+
+	      // Draw simple line trail behind the arrow
+	      ctx.beginPath();
+	      ctx.moveTo(-trailLength / 2, -trailWidth / 2);
+	      ctx.lineTo(0, -trailWidth / 2); // Only draw up to the arrow's position
+	      ctx.lineTo(0, trailWidth / 2);
+	      ctx.lineTo(-trailLength / 2, trailWidth / 2);
+	      ctx.closePath();
+	      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; // Fixed low opacity white
+	      ctx.fill();
+	      ctx.restore();
 	    }
 	  },
 	  'selfHeal': {
@@ -2405,13 +2838,251 @@
 	    trailLength: 35,
 	    shake: true,
 	    onHit: {
-	      "star": size => Math.min(Math.ceil(size * 10), 20)
+	      "lava": size => Math.min(Math.ceil(size * 6), 10)
 	    },
 	    draw: (ctx, p) => {
 	      ctx.beginPath();
 	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
 	      ctx.fillStyle = p.color;
 	      ctx.fill();
+	    }
+	  },
+	  'lavaPlume': {
+	    speedFactor: 1,
+	    trailLength: 35,
+	    shake: true,
+	    onHit: {
+	      "lava": size => Math.min(Math.ceil(size * 4), 8),
+	      "smallParticle": size => Math.min(Math.ceil(size * 10), 60)
+	    },
+	    draw: (ctx, p) => {
+	      // Draw main projectile
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+
+	      // Create inner glow gradient
+	      const innerGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 1.5);
+	      innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+	      innerGlow.addColorStop(0.5, 'rgba(255, 7, 7, 0.4)');
+	      innerGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+	      ctx.fillStyle = innerGlow;
+	      ctx.fill();
+	    },
+	    glow: (ctx, p) => {
+	      // Create outer glow gradient
+	      const outerGlow = ctx.createRadialGradient(p.x, p.y, p.size * 1.5, p.x, p.y, p.size * 4);
+	      outerGlow.addColorStop(0, 'rgba(255, 12, 12, 0.3)');
+	      outerGlow.addColorStop(0.5, 'rgba(250, 178, 24, 0.2)');
+	      outerGlow.addColorStop(1, 'rgba(255, 50, 0, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+	      ctx.fillStyle = outerGlow;
+	      ctx.fill();
+
+	      // Add pulsing effect
+	      const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
+	      const pulseGlow = ctx.createRadialGradient(p.x, p.y, p.size * 2, p.x, p.y, pulseSize);
+	      pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+	      pulseGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+	      ctx.fillStyle = pulseGlow;
+	      ctx.fill();
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = i / p.totalLength;
+	      const trailSize = p.size * (1 + Math.sin(Date.now() * 0.01) * 0.2);
+
+	      // Create glowing trail gradient
+	      const trailGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, trailSize * 2);
+	      trailGlow.addColorStop(0, `rgba(255, 200, 50, ${alpha * 0.3})`);
+	      trailGlow.addColorStop(1, `rgba(255, 100, 0, 0)`);
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+	      ctx.fillStyle = trailGlow;
+	      ctx.fill();
+	    }
+	  },
+	  'iceBlast': {
+	    speedFactor: 1,
+	    trailLength: 35,
+	    shake: true,
+	    onHit: {
+	      "ice": size => Math.min(Math.ceil(size * 8), 12)
+	    },
+	    draw: (ctx, p) => {
+	      // Draw main projectile
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+
+	      // Create inner glow gradient
+	      const innerGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 1.5);
+	      innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+	      innerGlow.addColorStop(0.5, 'rgba(200, 230, 255, 0.4)');
+	      innerGlow.addColorStop(1, 'rgba(150, 200, 255, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+	      ctx.fillStyle = innerGlow;
+	      ctx.fill();
+	    },
+	    glow: (ctx, p) => {
+	      // Create outer glow gradient
+	      const outerGlow = ctx.createRadialGradient(p.x, p.y, p.size * 1.5, p.x, p.y, p.size * 4);
+	      outerGlow.addColorStop(0, 'rgba(200, 230, 255, 0.3)');
+	      outerGlow.addColorStop(0.5, 'rgba(150, 200, 255, 0.2)');
+	      outerGlow.addColorStop(1, 'rgba(100, 150, 255, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+	      ctx.fillStyle = outerGlow;
+	      ctx.fill();
+
+	      // Add pulsing effect
+	      const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
+	      const pulseGlow = ctx.createRadialGradient(p.x, p.y, p.size * 2, p.x, p.y, pulseSize);
+	      pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+	      pulseGlow.addColorStop(1, 'rgba(150, 200, 255, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+	      ctx.fillStyle = pulseGlow;
+	      ctx.fill();
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = i / p.totalLength;
+	      const trailSize = p.size * (1 + Math.sin(Date.now() * 0.01) * 0.2);
+
+	      // Create glowing trail gradient
+	      const trailGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, trailSize * 2);
+	      trailGlow.addColorStop(0, `rgba(200, 230, 255, ${alpha * 0.3})`);
+	      trailGlow.addColorStop(1, `rgba(150, 200, 255, 0)`);
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+	      ctx.fillStyle = trailGlow;
+	      ctx.fill();
+	    }
+	  },
+	  'poisonDust': {
+	    speedFactor: 1,
+	    trailLength: 35,
+	    shake: true,
+	    onHit: {
+	      "poison": size => Math.min(Math.ceil(size * 8), 12)
+	    },
+	    draw: (ctx, p) => {
+	      // Draw main projectile
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+
+	      // Create inner glow gradient
+	      const innerGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 1.5);
+	      innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+	      innerGlow.addColorStop(0.5, 'rgba(100, 255, 100, 0.4)');
+	      innerGlow.addColorStop(1, 'rgba(50, 200, 50, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+	      ctx.fillStyle = innerGlow;
+	      ctx.fill();
+	    },
+	    glow: (ctx, p) => {
+	      // Create outer glow gradient
+	      const outerGlow = ctx.createRadialGradient(p.x, p.y, p.size * 1.5, p.x, p.y, p.size * 4);
+	      outerGlow.addColorStop(0, 'rgba(100, 255, 100, 0.3)');
+	      outerGlow.addColorStop(0.5, 'rgba(50, 200, 50, 0.2)');
+	      outerGlow.addColorStop(1, 'rgba(0, 150, 0, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+	      ctx.fillStyle = outerGlow;
+	      ctx.fill();
+
+	      // Add pulsing effect
+	      const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
+	      const pulseGlow = ctx.createRadialGradient(p.x, p.y, p.size * 2, p.x, p.y, pulseSize);
+	      pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+	      pulseGlow.addColorStop(1, 'rgba(50, 200, 50, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+	      ctx.fillStyle = pulseGlow;
+	      ctx.fill();
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = i / p.totalLength;
+	      p.x = p.x + (Math.random() - 0.5) * 5;
+	      p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
+	      ctx.beginPath();
+	      const lineWidth = p.size * Math.sqrt(alpha);
+	      ctx.strokeStyle = `${p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`)}`;
+	      ctx.lineWidth = lineWidth;
+	      ctx.moveTo(p.x, p.y);
+	      ctx.lineTo(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20);
+	      ctx.stroke();
+	      ctx.fill();
+	    }
+	  },
+	  'thrust': {
+	    speedFactor: 3,
+	    gravity: -0.001,
+	    trailLength: 0,
+	    shake: true,
+	    onHit: {
+	      "smallParticle": size => Math.min(Math.ceil(size * 4), 10),
+	      "pierce": size => Math.min(Math.ceil(size * 4), 6),
+	      "shockwave": size => Math.min(Math.ceil(size * 4), 6)
+	    },
+	    draw: (ctx, p) => {
+	      const shaftLength = p.size * 12; // Longer shaft
+	      const shaftWidth = p.size * 0.8; // Thicker shaft
+	      const tipLength = p.size * 3; // Length of the pointed tip
+	      const tipWidth = p.size * 1.2; // Width at the base of the tip
+
+	      ctx.save();
+	      ctx.translate(p.x, p.y);
+	      ctx.rotate(Math.atan2(p.velocity.y, p.velocity.x));
+
+	      // Draw shaft
+	      ctx.beginPath();
+	      ctx.moveTo(-shaftLength / 2, -shaftWidth / 2);
+	      ctx.lineTo(shaftLength / 2 - tipLength, -shaftWidth / 2);
+	      ctx.lineTo(shaftLength / 2 - tipLength, shaftWidth / 2);
+	      ctx.lineTo(-shaftLength / 2, shaftWidth / 2);
+	      ctx.closePath();
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+
+	      // Draw tip
+	      ctx.beginPath();
+	      ctx.moveTo(shaftLength / 2 - tipLength, -tipWidth / 2);
+	      ctx.lineTo(shaftLength / 2, 0);
+	      ctx.lineTo(shaftLength / 2 - tipLength, tipWidth / 2);
+	      ctx.closePath();
+	      ctx.fillStyle = p.color;
+	      ctx.fill();
+
+	      // Add highlight to shaft
+	      ctx.beginPath();
+	      ctx.moveTo(-shaftLength / 2, -shaftWidth / 2);
+	      ctx.lineTo(shaftLength / 2 - tipLength, -shaftWidth / 2);
+	      ctx.lineTo(shaftLength / 2 - tipLength, 0);
+	      ctx.lineTo(-shaftLength / 2, 0);
+	      ctx.closePath();
+	      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+	      ctx.fill();
+
+	      // Add highlight to tip
+	      ctx.beginPath();
+	      ctx.moveTo(shaftLength / 2 - tipLength, -tipWidth / 2);
+	      ctx.lineTo(shaftLength / 2, 0);
+	      ctx.lineTo(shaftLength / 2 - tipLength, 0);
+	      ctx.closePath();
+	      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+	      ctx.fill();
+	      ctx.restore();
 	    }
 	  }
 	};
@@ -2422,7 +3093,7 @@
 	  'heal': 'heal',
 	  '/abilities/fireball': "fireball",
 	  '/abilities/firestorm': "fireball",
-	  '/abilities/flame_blast': "fireball",
+	  '/abilities/flame_blast': "lavaPlume",
 	  '/abilities/smoke_burst': "fireball",
 	  '/abilities/aqua_arrow': "water",
 	  '/abilities/frost_surge': "water",
