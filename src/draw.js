@@ -2,6 +2,7 @@ import { projectileEffectsMap } from "./effects/projectile.js";
 import { abilityEffectsMap } from "./effects/abilities.js";
 import { onHitEffectsMap } from "./effects/hit.js";
 import { settingsMap } from "./setting.js";
+import { applyShakeEffect, addDamageHPBar, applyDeadEffect } from "./effects/domEffect.js";
 
 const canvas = initTrackerCanvas();
 const ctx = canvas.getContext('2d');
@@ -30,164 +31,6 @@ function initTrackerCanvas() {
 }
 
 // Update shake animation effect to ensure element returns to original position
-function applyShakeEffect(element, intensity = 1, duration = 500) {
-    if (!element) return;
-    
-    // Store the element's original position/transform
-    const originalTransform = element.style.transform || '';
-    const originalTransition = element.style.transition || '';
-
-    intensity *= settingsMap.shakeEffectScale.value || 1;
-
-    // Scale intensity based on size/damage
-    const scaledIntensity = Math.min(10, intensity);
-    
-    // Apply CSS animation
-    element.style.transition = 'transform 50ms ease-in-out';
-    
-    let shakeCount = 0;
-    const maxShakes = Math.ceil(intensity);
-    const shakeInterval = 50;
-    const interval = setInterval(() => {
-        if (shakeCount >= maxShakes) {
-            // Ensure element returns to original position
-            clearInterval(interval);
-            element.style.transform = originalTransform;
-            element.style.transition = originalTransition;
-            return;
-        }
-        
-        // Random offset for shaking effect
-        const xOffset = (Math.random() - 0.5) * 2 * scaledIntensity;
-        const yOffset = (Math.random() - 0.5) * 2 * scaledIntensity;
-        element.style.transform = `${originalTransform} translate(${xOffset}px, ${yOffset}px)`;
-        shakeCount++;
-    }, shakeInterval);
-    
-    // Additional safeguard: ensure element returns to original position after max duration
-    setTimeout(() => {
-        clearInterval(interval);
-        element.style.transform = 'translate(0, 0)';
-        element.style.transition = originalTransition;
-    }, shakeInterval * (maxShakes + 1)); // Slightly longer than maxShakes * interval time
-}
-
-function addDamageHPBar(element, damage) {
-    const hpBarContainer = element.querySelector(".HitpointsBar_hitpointsBar__2vIqC");
-    const hpBarFront = hpBarContainer.querySelector(".HitpointsBar_currentHp__5exLr");
-    // hpBarFront.style.zIndex = "1";
-    const hpBarValue = hpBarContainer.querySelector(".HitpointsBar_hpValue__xNp7m");
-    // hpBarValue.style.zIndex = "2";
-    const hpStat = hpBarValue.innerHTML.split("/");
-    const currentHp = parseInt(hpStat[0]);
-    const maxHp = parseInt(hpStat[1]);
-
-    // Insert a HpBar behind and set the color to red
-    const hpBarBack = document.createElement("div");
-    hpBarBack.className = "HitpointsBar_currentHp__5exLr HitTracker_hpDrop";
-    hpBarBack.style.background = "var(--color-warning)";
-    hpBarBack.style.position = "absolute";
-    hpBarBack.style.top = "0px";
-    hpBarBack.style.left = "0px";
-    // hpBarBack.style.zIndex = "1"; // Ensure the back bar is below the front bar
-    hpBarBack.style.width = `${hpBarFront.offsetWidth}px`;
-    hpBarBack.style.height = `${hpBarFront.offsetHeight}px`;
-    hpBarBack.style.transformOrigin = "left center";
-    hpBarBack.style.transform = `scaleX(${(currentHp + damage) / maxHp})`;
-    // add animation to drop down
-    hpBarBack.style.transition = "transform 0.5s ease-in-out";
-    hpBarFront.parentNode.insertBefore(hpBarBack, hpBarFront); // Insert the back bar before the front bar
-
-    const dropDelay = Math.ceil(settingsMap.damageHpBarDropDelay.value || 300);
-
-    setTimeout(() => {
-        hpBarBack.style.transform = `scaleX(0)`;
-    }, dropDelay);
-
-    setTimeout(() => {
-        hpBarBack.remove();
-    }, dropDelay + 500);
-}
-
-export function resetAllMonsterSvg() {
-    const monsterArea = document.querySelector(".BattlePanel_monstersArea__2dzrY");
-    if (monsterArea){
-        const monsterSvgs = monsterArea.querySelectorAll(".Icon_icon__2LtL_");
-        monsterSvgs.forEach((monsterSvg) => {
-            monsterSvg.style.transition = "none";
-            monsterSvg.style.transform = "rotate(0deg)";
-            monsterSvg.style.opacity = "1";
-        });
-    }
-}
-
-function applyDeadEffect(element) {
-    const monsterSvg = element.querySelector(".Icon_icon__2LtL_");
-    monsterSvg.style.transition = "transform 0.1s ease-in-out";
-    monsterSvg.style.transformOrigin = "bottom center";
-    monsterSvg.style.transform = "rotate(15deg)";
-    setTimeout(() => {
-        monsterSvg.style.transition = "transform 0.5s ease-in-out, opacity 0.5s ease-in-out";
-        monsterSvg.style.transform = "rotate(-180deg)";
-        monsterSvg.style.opacity = "0";
-    }, 300);
-    // fade out
-    // setTimeout(() => {
-    //     monsterSvg.style.transition = "opacity 0.5s ease-in-out";
-    // }, 800);
-}
-
-// 更新和渲染所有命中效果
-function updateOnHits() {
-    // 遍历所有活跃的命中
-    for (let i = activeOnHitAnimation.length - 1; i >= 0; i--) {
-        const effect = activeOnHitAnimation[i];
-        effect.count++;
-
-        if (effect.count >= effect.maxCount) {
-            activeOnHitAnimation.splice(i, 1);
-            continue;
-        }
-
-        ctx.save();
-
-        // 更新各自效果
-        effect.effects.forEach((e, index) => {
-            e.draw(ctx, e);
-        });
-
-        // 伤害文本
-        if (effect.otherInfo.damage) {
-            const fontSizeScale = settingsMap.damageTextScale.value || 1;
-            const fontSizeLimit = settingsMap.damageTextSizeLimit.value || 70;
-            const fontAlpha = settingsMap.damageTextAlpha.value || 0.8;
-
-            const fontSize=  Math.min(Math.max(14, Math.pow(effect.otherInfo.damage,0.65)/2*fontSizeScale), fontSizeLimit);
-            const damageText = `${effect.otherInfo.damage}`
-            ctx.font = `${fontSize}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            const textSize = ctx.measureText(damageText);
-            const textPosition = {
-                x: effect.otherInfo.end.x - textSize.width / 2 + 5,
-                y: effect.otherInfo.end.y - 20,
-            }
-
-
-            // border
-            ctx.strokeStyle = effect.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${fontAlpha})`);
-            ctx.lineWidth = 6;
-            ctx.strokeText(damageText, textPosition.x, textPosition.y);
-            // main
-            const fillColor = effect.otherInfo.isCrit ? 'rgba(255, 213, 89, 1)' : 'white';
-            ctx.fillStyle = fillColor;
-            ctx.fillText(damageText, textPosition.x, textPosition.y);
-        }
-        ctx.restore();
-    }
-}
-
 let fpsStatTime = new Date().getTime();
 let fpsQueue = [];
 let fps = 60;
@@ -405,6 +248,7 @@ function createOnHitEffect(projectile) {
                 speed: effectSpeed,
                 gravity: effect.gravity ? effect.gravity(projectile) : 0,
                 life: effectLife,
+                maxLife: effectLife,
                 color: effect.color ? effect.color(projectile) : projectile.color,
                 draw: effect.draw ? effect.draw : (ctx, p) => {},
             });
@@ -425,6 +269,57 @@ function createOnHitEffect(projectile) {
     };
     
     activeOnHitAnimation.push(onHitEffectData);
+}
+
+// 更新和渲染所有命中效果
+function updateOnHits() {
+    // 遍历所有活跃的命中
+    for (let i = activeOnHitAnimation.length - 1; i >= 0; i--) {
+        const effect = activeOnHitAnimation[i];
+        effect.count++;
+
+        if (effect.count >= effect.maxCount) {
+            activeOnHitAnimation.splice(i, 1);
+            continue;
+        }
+
+        ctx.save();
+
+        // 更新各自效果
+        effect.effects.forEach((e, index) => {
+            e.draw(ctx, e);
+        });
+
+        // 伤害文本
+        if (effect.otherInfo.damage) {
+            const fontSizeScale = settingsMap.damageTextScale.value || 1;
+            const fontSizeLimit = settingsMap.damageTextSizeLimit.value || 70;
+            const fontAlpha = settingsMap.damageTextAlpha.value || 0.8;
+
+            const fontSize=  Math.min(Math.max(14, Math.pow(effect.otherInfo.damage,0.65)/2*fontSizeScale), fontSizeLimit);
+            const damageText = `${effect.otherInfo.damage}`
+            ctx.font = `${fontSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const textSize = ctx.measureText(damageText);
+            const textPosition = {
+                x: effect.otherInfo.end.x - textSize.width / 2 + 5,
+                y: effect.otherInfo.end.y - 20,
+            }
+
+
+            // border
+            ctx.strokeStyle = effect.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${fontAlpha})`);
+            ctx.lineWidth = 6;
+            ctx.strokeText(damageText, textPosition.x, textPosition.y);
+            // main
+            const fillColor = effect.otherInfo.isCrit ? 'rgba(255, 213, 89, 1)' : 'white';
+            ctx.fillStyle = fillColor;
+            ctx.fillText(damageText, textPosition.x, textPosition.y);
+        }
+        ctx.restore();
+    }
 }
 
 export function createProjectile(startElement, endElement, color, initialSpeed = 1, damage = 200, projectileType = 'default', isCrit = false, isKill = false) {

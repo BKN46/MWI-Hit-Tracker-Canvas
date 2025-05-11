@@ -1,3 +1,4 @@
+import { changeColorAlpha } from "./utils.js";
 import { onHitEffectsMap } from './hit.js';
 
 /*
@@ -52,7 +53,7 @@ export const projectileEffectsMap = {
             const alpha = i / p.totalLength;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
-            ctx.fillStyle = p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+            ctx.fillStyle = changeColorAlpha(p.color, alpha);
             ctx.fill();
         }
     },
@@ -93,7 +94,7 @@ export const projectileEffectsMap = {
             p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
             ctx.beginPath();
             const lineWidth = p.size * Math.sqrt(alpha);
-            ctx.strokeStyle = `${p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`)}`;
+            ctx.strokeStyle = `${changeColorAlpha(p.color, alpha)}`;
             ctx.lineWidth = lineWidth;
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20);
@@ -140,7 +141,7 @@ export const projectileEffectsMap = {
             p.y = p.y - (Math.random() - 0.5) * 1;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
-            ctx.fillStyle = p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+            ctx.fillStyle = changeColorAlpha(p.color, alpha);
             ctx.fill();
         }
     },
@@ -159,8 +160,8 @@ export const projectileEffectsMap = {
         }
     },
     'range': {
-        speedFactor: 1.7,
-        gravity: 0.1,
+        speedFactor: 1.5,
+        gravity: 0.15,
         trailLength: 30,
         shake: true,
         onHit: {
@@ -273,11 +274,12 @@ export const projectileEffectsMap = {
         },
     },
     'lavaPlume': {
-        speedFactor: 1,
-        trailLength: 35,
+        speedFactor: 0.8,
+        trailLength: 40,
+        gravity: 0.1,
         shake: true,
         onHit: {
-            "lava": (size) => Math.min(Math.ceil(size * 4), 8),            
+            "lava": (size) => Math.min(Math.ceil(size * 20), 20),            
             "smallParticle": (size) => Math.min(Math.ceil(size * 10), 60),
         },
         draw: (ctx, p) => {
@@ -293,8 +295,8 @@ export const projectileEffectsMap = {
                 p.x, p.y, p.size * 1.5
             );
             innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-            innerGlow.addColorStop(0.5, 'rgba(255, 7, 7, 0.4)');
-            innerGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            innerGlow.addColorStop(0.5, p.color);
+            innerGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
             
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
@@ -307,8 +309,8 @@ export const projectileEffectsMap = {
                 p.x, p.y, p.size * 1.5,
                 p.x, p.y, p.size * 4
             );
-            outerGlow.addColorStop(0, 'rgba(255, 12, 12, 0.3)');
-            outerGlow.addColorStop(0.5, 'rgba(250, 178, 24, 0.2)');
+            outerGlow.addColorStop(0, p.color);
+            // outerGlow.addColorStop(0.5, 'rgba(250, 178, 24, 0.2)');
             outerGlow.addColorStop(1, 'rgba(255, 50, 0, 0)');
             
             ctx.beginPath();
@@ -322,7 +324,7 @@ export const projectileEffectsMap = {
                 p.x, p.y, p.size * 2,
                 p.x, p.y, pulseSize
             );
-            pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+            pulseGlow.addColorStop(0, changeColorAlpha(p.color, 0.1));
             pulseGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
             
             ctx.beginPath();
@@ -332,49 +334,49 @@ export const projectileEffectsMap = {
         },
         trail: (ctx, p, i) => {
             const alpha = i / p.totalLength;
-            const trailSize = p.size * (1 + Math.sin(Date.now() * 0.01) * 0.2);
-            
+            const trailSize = p.size * alpha;
+
             // Create glowing trail gradient
-            const trailGlow = ctx.createRadialGradient(
-                p.x, p.y, 0,
-                p.x, p.y, trailSize * 2
-            );
-            trailGlow.addColorStop(0, `rgba(255, 200, 50, ${alpha * 0.3})`);
-            trailGlow.addColorStop(1, `rgba(255, 100, 0, 0)`);
+            // const trailGlow = ctx.createRadialGradient(
+            //     p.x, p.y, 0,
+            //     p.x, p.y, trailSize * 2
+            // );
+            // trailGlow.addColorStop(0, changeColorAlpha(p.color, alpha));
+            // trailGlow.addColorStop(1, changeColorAlpha(p.color, 0));
             
             ctx.beginPath();
             ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
-            ctx.fillStyle = trailGlow;
+            ctx.fillStyle = changeColorAlpha(p.color, alpha);
             ctx.fill();
         }
     },
     'iceBlast': {
-        speedFactor: 1,
+        speedFactor: 1.3,
         trailLength: 35,
         shake: true,
         onHit: {
-            "ice": (size) => Math.min(Math.ceil(size * 8), 12),
+            "ice": (size) => Math.min(Math.ceil(size * 30), 40),
         },
         draw: (ctx, p) => {
+            const length = p.size * 6.65;
+            const arrowHeadLength = p.size * 3;
+            const arrowHeadWidth = p.size * 2;
+
             // Draw main projectile
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(Math.atan2(p.velocity.y, p.velocity.x));
+
+            // Draw arrow head
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.moveTo(length/3 - arrowHeadLength, -arrowHeadWidth/2);
+            ctx.lineTo(length/2, 0);
+            ctx.lineTo(length/3 - arrowHeadLength, arrowHeadWidth/2);
+            ctx.closePath();
             ctx.fillStyle = p.color;
             ctx.fill();
-
-            // Create inner glow gradient
-            const innerGlow = ctx.createRadialGradient(
-                p.x, p.y, 0,
-                p.x, p.y, p.size * 1.5
-            );
-            innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-            innerGlow.addColorStop(0.5, 'rgba(200, 230, 255, 0.4)');
-            innerGlow.addColorStop(1, 'rgba(150, 200, 255, 0)');
             
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
-            ctx.fillStyle = innerGlow;
-            ctx.fill();
+            ctx.restore();
         },
         glow: (ctx, p) => {
             // Create outer glow gradient
@@ -386,24 +388,18 @@ export const projectileEffectsMap = {
             outerGlow.addColorStop(0.5, 'rgba(150, 200, 255, 0.2)');
             outerGlow.addColorStop(1, 'rgba(100, 150, 255, 0)');
             
+            const length = p.size * 6.65;
+            const arrowHeadLength = p.size * 3;
+            const arrowHeadWidth = p.size * 2;
+
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
-            ctx.fillStyle = outerGlow;
+            ctx.moveTo(length/3 - arrowHeadLength, -arrowHeadWidth/2);
+            ctx.lineTo(length/2, 0);
+            ctx.lineTo(length/3 - arrowHeadLength, arrowHeadWidth/2);
+            ctx.closePath();
+            ctx.fillStyle = p.color;
             ctx.fill();
 
-            // Add pulsing effect
-            const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
-            const pulseGlow = ctx.createRadialGradient(
-                p.x, p.y, p.size * 2,
-                p.x, p.y, pulseSize
-            );
-            pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
-            pulseGlow.addColorStop(1, 'rgba(150, 200, 255, 0)');
-            
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
-            ctx.fillStyle = pulseGlow;
-            ctx.fill();
         },
         trail: (ctx, p, i) => {
             const alpha = i / p.totalLength;
@@ -414,11 +410,11 @@ export const projectileEffectsMap = {
                 p.x, p.y, 0,
                 p.x, p.y, trailSize * 2
             );
-            trailGlow.addColorStop(0, `rgba(200, 230, 255, ${alpha * 0.3})`);
+            trailGlow.addColorStop(0, changeColorAlpha(p.color, alpha));
             trailGlow.addColorStop(1, `rgba(150, 200, 255, 0)`);
             
             ctx.beginPath();
-            ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, trailSize, 0, Math.PI * 2);
             ctx.fillStyle = trailGlow;
             ctx.fill();
         }
@@ -443,7 +439,7 @@ export const projectileEffectsMap = {
                 p.x, p.y, p.size * 1.5
             );
             innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-            innerGlow.addColorStop(0.5, 'rgba(100, 255, 100, 0.4)');
+            innerGlow.addColorStop(0.5, changeColorAlpha(p.color, 0.5));
             innerGlow.addColorStop(1, 'rgba(50, 200, 50, 0)');
             
             ctx.beginPath();
@@ -457,27 +453,13 @@ export const projectileEffectsMap = {
                 p.x, p.y, p.size * 1.5,
                 p.x, p.y, p.size * 4
             );
-            outerGlow.addColorStop(0, 'rgba(100, 255, 100, 0.3)');
-            outerGlow.addColorStop(0.5, 'rgba(50, 200, 50, 0.2)');
+            outerGlow.addColorStop(0, changeColorAlpha(p.color, 0.5));
+            // outerGlow.addColorStop(0.5, 'rgba(50, 200, 50, 0.2)');
             outerGlow.addColorStop(1, 'rgba(0, 150, 0, 0)');
             
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
             ctx.fillStyle = outerGlow;
-            ctx.fill();
-
-            // Add pulsing effect
-            const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
-            const pulseGlow = ctx.createRadialGradient(
-                p.x, p.y, p.size * 2,
-                p.x, p.y, pulseSize
-            );
-            pulseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
-            pulseGlow.addColorStop(1, 'rgba(50, 200, 50, 0)');
-            
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
-            ctx.fillStyle = pulseGlow;
             ctx.fill();
         },
         trail: (ctx, p, i) => {
@@ -486,7 +468,7 @@ export const projectileEffectsMap = {
             p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
             ctx.beginPath();
             const lineWidth = p.size * Math.sqrt(alpha);
-            ctx.strokeStyle = `${p.color.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`)}`;
+            ctx.strokeStyle = `${changeColorAlpha(p.color, alpha)}`;
             ctx.lineWidth = lineWidth;
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20);
@@ -502,7 +484,7 @@ export const projectileEffectsMap = {
         onHit: {
             "smallParticle": (size) => Math.min(Math.ceil(size * 4), 10),
             "pierce": (size) => Math.min(Math.ceil(size * 4), 6),
-            "shockwave": (size) => Math.min(Math.ceil(size * 4), 6),
+            "shockwave": (size) => Math.min(Math.ceil(size * 2), 6),
         },
         draw: (ctx, p) => {
             const shaftLength = p.size * 12; // Longer shaft
