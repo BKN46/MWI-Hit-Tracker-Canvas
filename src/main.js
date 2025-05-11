@@ -28,7 +28,12 @@ function hookWS() {
         const message = oriGet.call(this);
         Object.defineProperty(this, "data", { value: message }); // Anti-loop
 
-        return handleMessage(message);
+        try {
+            return handleMessage(message);
+        } catch (error) {
+            console.log("Error in hit-tracker handleMessage:", error);
+            return message;
+        }
     }
 }
 
