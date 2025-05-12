@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.1.4
+// @version        1.1.5
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -2632,6 +2632,7 @@
 
 	        // Particle configuration
 	        const numPoints = 16;
+	        p.numPoints = numPoints;
 	        p.noiseOffsets = Array.from({
 	          length: numPoints
 	        }, () => Math.random() * Math.PI * 2);
@@ -2644,6 +2645,7 @@
 	        p.time = 0;
 	        p.rotation = Math.random() * Math.PI * 2;
 	        p.rotationSpeed = (Math.random() - 0.5) * 0.05;
+	        p.oringinalSize = p.size;
 	      }
 	      p.life -= 1;
 	      p.speed *= 0.98;
@@ -2655,7 +2657,7 @@
 	      const lifeRatio = p.life / p.maxLife;
 	      const opacity = lifeRatio * 0.8;
 	      const sizeReduction = Math.pow(lifeRatio, 0.1);
-	      p.size = p.size * sizeReduction;
+	      p.size = Math.min(p.size * sizeReduction, p.oringinalSize);
 	      if (p.life > 0) {
 	        ctx.save();
 	        ctx.translate(p.x, p.y);

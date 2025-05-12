@@ -713,6 +713,7 @@ export const onHitEffectsMap = {
                 
                 // Particle configuration
                 const numPoints = 16;
+                p.numPoints = numPoints;
                 
                 p.noiseOffsets = Array.from({length: numPoints}, () => Math.random() * Math.PI * 2);
                 p.noiseAmplitudes = Array.from({length: numPoints}, () => Math.random() * 0.15 + 0.85);
@@ -720,6 +721,7 @@ export const onHitEffectsMap = {
                 p.time = 0
                 p.rotation = Math.random() * Math.PI * 2;
                 p.rotationSpeed = (Math.random() - 0.5) * 0.05;
+                p.oringinalSize = p.size;
             }
 
             p.life -= 1;
@@ -734,7 +736,7 @@ export const onHitEffectsMap = {
             const lifeRatio = p.life / p.maxLife;
             const opacity = lifeRatio * 0.8;
             const sizeReduction = Math.pow(lifeRatio, 0.1);
-            p.size = p.size * sizeReduction;
+            p.size = Math.min(p.size * sizeReduction, p.oringinalSize);
 
             if (p.life > 0) {
                 ctx.save();
