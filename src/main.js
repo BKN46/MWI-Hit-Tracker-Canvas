@@ -1,7 +1,7 @@
 import { waitForSettings, settingsMap } from "./setting.js";
-import { animate, createProjectile } from "./draw.js";
+import { animate, createProjectile, clearProjectiles } from "./draw.js";
+import { clearEffects } from "./effects/manager.js";
 import { resetAllMonsterSvg } from "./effects/domEffect.js";
-import { shapes } from "./effects/shape.js";
 import { deathEffect } from "./effects/domEffect.js";
 import { projectileEffectsMap } from "./effects/projectile.js";
 
@@ -12,6 +12,17 @@ waitForSettings({
 });
 
 hookWS();
+
+let isPageHidden = false;
+
+// 监听页面可见性变化
+document.addEventListener('visibilitychange', function() {
+    isPageHidden = document.hidden;
+    if (isPageHidden) {
+        clearProjectiles();
+        clearEffects();
+    }
+});
 
 // #region Hook WS
 function hookWS() {
@@ -32,6 +43,10 @@ function hookWS() {
 
         const message = oriGet.call(this);
         Object.defineProperty(this, "data", { value: message }); // Anti-loop
+
+        if (isPageHidden) {
+            return message;
+        }
 
         try {
             return handleMessage(message);

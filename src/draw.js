@@ -207,6 +207,10 @@ class Projectile {
 // Projectiles管理
 let projectiles = [];
 
+export function clearProjectiles() {
+    projectiles.splice(0, projectiles.length);
+}
+
 // 爆炸效果函数
 function createOnHitEffect(projectile) {
     const x = projectile.x;

@@ -16,3 +16,7 @@ export function addEffect({
         otherInfo,
     });
 }
+
+export function clearEffects() {
+    activeEffects.splice(0, activeEffects.length);
+}

@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.1.0
+// @version        1.1.1
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1919,6 +1919,11 @@
 	  }
 	};
 
+	/*
+	特效编写请查阅
+	https://docs.qq.com/doc/DS0JjVHp3S09td2NV
+	*/
+
 	const onHitEffectsMap = {
 	  "smoke": {
 	    angle: p => Math.random() * Math.PI * 2,
@@ -2830,22 +2835,8 @@
 	};
 
 	/*
-	projectEffect = {
-	    speedFactor: 1,         // 速度因子
-	    trailLength: 50,        // 尾迹长度
-	    gravity: 0.2,           // 重力
-	    shake: true,            // 是否震动
-	    color: rgba(0, 0, 0, 0),    // 强制颜色
-	    onHit: {                // 碰撞时的粒子效果
-	        "smoke": 0, 
-	    },
-	    draw: (ctx, p) => {     // 绘制函数, ctx为canvas的上下文对象, p为Projectile对象
-
-	    },
-	    glow: (ctx, p) => {     // 光晕绘制函数, ctx为canvas的上下文对象, p为Projectile对象，空则不绘制
-
-	    },
-	}
+	特效编写请查阅
+	https://docs.qq.com/doc/DS0JjVHp3S09td2NV
 	*/
 
 	const projectileEffectsMap = {
@@ -3384,6 +3375,9 @@
 	    otherInfo
 	  });
 	}
+	function clearEffects() {
+	  activeEffects.splice(0, activeEffects.length);
+	}
 
 	function applyShakeEffect(element, intensity = 1, duration = 500) {
 	  if (!element) return;
@@ -3822,6 +3816,9 @@
 
 	// Projectiles管理
 	let projectiles = [];
+	function clearProjectiles() {
+	  projectiles.splice(0, projectiles.length);
+	}
 
 	// 爆炸效果函数
 	function createOnHitEffect(projectile) {
@@ -3980,6 +3977,16 @@
 	  allProjectiles: Object.keys(projectileEffectsMap)
 	});
 	hookWS();
+	let isPageHidden = false;
+
+	// 监听页面可见性变化
+	document.addEventListener('visibilitychange', function () {
+	  isPageHidden = document.hidden;
+	  if (isPageHidden) {
+	    clearProjectiles();
+	    clearEffects();
+	  }
+	});
 
 	// #region Hook WS
 	function hookWS() {
@@ -4000,6 +4007,9 @@
 	      value: message
 	    }); // Anti-loop
 
+	    if (isPageHidden) {
+	      return message;
+	    }
 	    try {
 	      return handleMessage(message);
 	    } catch (error) {
