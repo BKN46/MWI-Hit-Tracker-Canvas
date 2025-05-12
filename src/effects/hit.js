@@ -1,6 +1,11 @@
 import { changeColorAlpha } from "./utils.js";
 import { shapes } from "./shape.js";
 
+/*
+特效编写请查阅
+https://docs.qq.com/doc/DS0JjVHp3S09td2NV
+*/
+
 export const onHitEffectsMap = {
     "smoke": {
         angle: (p) => Math.random() * Math.PI * 2,

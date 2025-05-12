@@ -8,6 +8,10 @@
 
 使用npm进行打包，便于开发
 
+特效编写手册请查阅  
+https://docs.qq.com/doc/DS0JjVHp3S09td2NV
+
+
 ## 配置编译环境
 
 安装npm  

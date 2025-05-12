@@ -2,22 +2,8 @@ import { changeColorAlpha } from "./utils.js";
 import { onHitEffectsMap } from './hit.js';
 
 /*
-projectEffect = {
-    speedFactor: 1,         // 速度因子
-    trailLength: 50,        // 尾迹长度
-    gravity: 0.2,           // 重力
-    shake: true,            // 是否震动
-    color: rgba(0, 0, 0, 0),    // 强制颜色
-    onHit: {                // 碰撞时的粒子效果
-        "smoke": 0, 
-    },
-    draw: (ctx, p) => {     // 绘制函数, ctx为canvas的上下文对象, p为Projectile对象
-
-    },
-    glow: (ctx, p) => {     // 光晕绘制函数, ctx为canvas的上下文对象, p为Projectile对象，空则不绘制
-
-    },
-}
+特效编写请查阅
+https://docs.qq.com/doc/DS0JjVHp3S09td2NV
 */
 
 export const projectileEffectsMap = {
