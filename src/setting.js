@@ -82,6 +82,14 @@ export let settingsMap = {
         max: 5.0,
         step: 0.01,
     },
+    projectileTrailGap: {
+        id: "projectileTrailGap",
+        desc: isZH ? "弹道尾迹间隔":"Projectile Trail Gap",
+        value: 1.0,
+        min: 0.05,
+        max: 3.0,
+        step: 0.05,
+    },
     originalDamageDisplay: {
         id: "originalDamageDisplay",
         desc: isZH ? "原版伤害显示":"Original Damage Display",
@@ -196,7 +204,20 @@ export let settingsMap = {
         r: 255,
         g: 0,
         b: 0,
-    }
+    },
+    renderFpsLimit: {
+        id: "renderFpsLimit",
+        desc: isZH ? "渲染帧数限制(非精确，刷新生效)":"Render FPS Limit (Not accurate, restart required)",
+        value: 160,
+        min: 5,
+        max: 300,
+        step: 1,
+    },
+    showFps: {
+        id: "showFps",
+        desc: isZH ? "显示帧数":"Show FPS",
+        value: false,
+    },
 };
 readSettings();
 

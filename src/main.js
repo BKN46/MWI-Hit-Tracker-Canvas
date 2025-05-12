@@ -1,5 +1,5 @@
 import { waitForSettings, settingsMap } from "./setting.js";
-import { animate, createProjectile, clearProjectiles } from "./draw.js";
+import { startAnimation, createProjectile, clearProjectiles } from "./draw.js";
 import { clearEffects } from "./effects/manager.js";
 import { resetAllMonsterSvg } from "./effects/domEffect.js";
 import { deathEffect } from "./effects/domEffect.js";
@@ -291,4 +291,4 @@ export function registProjectile({
 }
 
 // 启动动画
-animate();
+startAnimation();

@@ -43,11 +43,21 @@
             gap: 5px;
             color: white;
         }
+        .settingsPanel {
+            position: fixed;
+            top: 0;
+            left: 700px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: left;
+            align-items: center;
+        }
     </style>
     <link rel="stylesheet" type="text/css" href="game.css">
 </head>
 <body>
-    <div class="container">
+    <div class="BattlePanel_battleArea__U9hij">
         <div class="BattlePanel_playersArea__vvwlB">
             <div class="BattlePanel_combatUnitGrid__2hTAM" style="top: 100px;left: 100px;">
                 <div class="CombatUnit_combatUnit__1m3XT">
@@ -106,6 +116,9 @@
                 </div>
             </div>
         </div>
+        <div class="settingsPanel">
+            <div class="SettingsPanel_profileTab__214Bj"></div>
+        </div>
         <div class="selections">
             isCrit:<input type="checkbox" id="isCrit">
             isKill:<input type="checkbox" id="isKill">
@@ -121,6 +134,8 @@
         import { waitForSettings, settingsMap } from "../setting.js";
         import { registProjectile } from "../main.js";
         import { resetAllMonsterSvg } from "../effects/domEffect.js";
+
+        settingsMap.showFps.value = true;
 
         for (const [key, value] of Object.entries(projectileEffectsMap)) {
             const button = document.createElement("button");

@@ -41,15 +41,36 @@ let fps = 60;
 export function animate() {
     // 计算FPS
     const now = Date.now();
-    const delta = now - fpsStatTime;
+    const frameTime = now - fpsStatTime;
     fpsStatTime = now;
-    const fpsNow = Math.round(1000 / delta);
+    const fpsNow = Math.round(1000 / frameTime);
     fpsQueue.push(fpsNow);
-    if (fpsQueue.length > 30) {
+    if (fpsQueue.length > 120) {
         fpsQueue.shift();
     }
     fps = Math.round(fpsQueue.reduce((a, b) => a + b) / fpsQueue.length);
     fps = Math.min(Math.max(fps, 10), 300);
+
+    if (settingsMap.showFps.value) {
+        const fpsElement = document.querySelector('#hitTracker_fpsCounter');
+        if (fpsElement) {
+            fpsElement.innerText = `FPS: ${fps}`;
+        } else {
+            const parenetElement = document.querySelector(".BattlePanel_battleArea__U9hij");
+            if (parenetElement) {
+                const newFpsElement = document.createElement('div');
+                const center = getElementCenter(parenetElement);
+                newFpsElement.id = 'hitTracker_fpsCounter';
+                newFpsElement.style.position = 'fixed';
+                newFpsElement.style.top = `${center.x - parenetElement.innerWidth}px`;
+                newFpsElement.style.left = `${center.y - parenetElement.innerHeight}px`;
+                newFpsElement.style.color = 'rgba(200, 200, 200, 0.8)';
+                newFpsElement.style.zIndex = '9999';
+                newFpsElement.innerText = `FPS: ${fps}`;
+                parenetElement.appendChild(newFpsElement);
+            }
+        }
+    }
 
 
     // 完全清空画布
@@ -72,8 +93,20 @@ export function animate() {
     
     // 更新和渲染所有爆炸效果
     updateOnHits();
+}
 
-    requestAnimationFrame(animate);
+
+export function startAnimation() {
+    const fpsLimit = settingsMap.renderFpsLimit.value || 60;
+    const fpsInterval = 1000 / fpsLimit;
+    setInterval(() => {
+        animate();
+    }, fpsInterval);
+}
+
+
+function getFpsFactor() {
+    return Math.min(Math.max(160 / fps, 0.125), 8);
 }
 
 class Projectile {
@@ -105,17 +138,25 @@ class Projectile {
         
         // 重新设计飞行时间计算，确保合理
         // const timeInAir = distance / this.initialSpeed / 10;
-        let timeInAir = 80 / this.initialSpeed;
+        this.timeInAir = 80 / this.initialSpeed;
 
         // FPS因子，确保在不同FPS下效果一致
-        const fpsFactor = Math.min(Math.max(160 / fps, 0.125), 8); 
-        this.gravity *= fpsFactor;
-        timeInAir /= fpsFactor;
+        const fpsFactor = getFpsFactor(); 
+        this.gravity *= Math.pow(fpsFactor, 2);
+        this.timeInAir /= fpsFactor;
 
         // 计算初始速度，修正公式确保能够到达目标
         this.velocity = {
-            x: dx / timeInAir,
-            y: (dy / timeInAir) - (this.gravity * timeInAir / 2)
+            x: dx / this.timeInAir,
+            y: (dy / this.timeInAir) - (this.gravity * this.timeInAir / 2)
+        };
+        this.initialVelocity = {...this.velocity}
+
+        this.trajectory = (time) => {
+            return {
+                x: startX + this.initialVelocity.x * time,
+                y: startY + this.initialVelocity.y * time + (this.gravity * time * time) / 2
+            };
         };
         
         // 大小参数 (范围1-100)
@@ -128,33 +169,51 @@ class Projectile {
         
         // 拖尾效果
         this.trail = [];
+        this.independentTrail = this.effect.independentTrail || false; // 是否独立拖尾
         this.maxTrailLength = Math.floor((this.effect.trailLength || 35) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
         this.maxTrailLength *= settingsMap.projectileTrailLength.value || 1; // 拖尾缩放因子
+        this.trailGap = (settingsMap.projectileTrailGap.value || 1) / fpsFactor;
     }
 
     update() {
-        // 更新速度 (考虑重力)
-        this.velocity.y += this.gravity;
         this.life += 1;
-        
-        // 更新位置
-        this.x += this.velocity.x;
-        this.y += this.velocity.y;
+        const pos = this.trajectory(this.life);
+        this.velocity.y += this.gravity;
+        this.x = pos.x;
+        this.y = pos.y;
 
         // 更新拖尾
-        if (this.effect.trailLength > 0){
-            this.trail.push({
-                x: this.x,
-                y: this.y,
-                vX: this.velocity.x,
-                vY: this.velocity.y,
-                color: this.color,
-                size: this.size,
-                totalLength: Math.max(this.trail.length, 1),
-            });
-        }
-        if(this.trail.length > this.maxTrailLength) {
-            this.trail.shift();
+        if (this.independentTrail) {
+            if (this.effect.trailLength > 0){
+                this.trail.push({
+                    x: this.x,
+                    y: this.y,
+                    vX: this.velocity.x,
+                    vY: this.velocity.y,
+                    color: this.color,
+                    size: this.size,
+                    totalLength: Math.max(this.trail.length, 1),
+                });
+            }
+            if(this.trail.length > this.maxTrailLength) {
+                this.trail.shift();
+            }
+        } else {
+            this.trail = [];
+            for (let i = 0; i < this.maxTrailLength; i++) {
+                const trailTime = this.life - (this.maxTrailLength - i - 1) * this.trailGap;
+                if (trailTime <= 0) break;
+                const trailPos = this.trajectory(trailTime);
+                this.trail.push({
+                    x: trailPos.x,
+                    y: trailPos.y,
+                    vX: this.velocity.x,
+                    vY: this.velocity.y,
+                    color: this.color,
+                    size: this.size,
+                    totalLength: this.maxTrailLength,
+                });
+            }
         }
     }
 
@@ -183,6 +242,8 @@ class Projectile {
 
     isArrived() {
         if (this.life >= this.timeInAir) {
+            this.x = this.target.x;
+            this.y = this.target.y;
             return true;
         }
         // 判断是否到达目标点 (调整判定距离)
@@ -226,7 +287,7 @@ function createOnHitEffect(projectile) {
     const particleFactor = settingsMap.particleEffectRatio.value || 1;
     const particleSpeedFactor = settingsMap.particleSpeedRatio.value || 1;
     const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
-    const fpsFactor = Math.min(Math.max(160 / fps, 0.125), 8);
+    const fpsFactor = getFpsFactor();
 
     const effects = [];
 
@@ -243,8 +304,8 @@ function createOnHitEffect(projectile) {
         const effectCount = Math.ceil(onHitEffect[effectName](projectile.size) * particleFactor);
         for (let i = 0; i < effectCount; i++) {
             const effectSize = (effect.size ? effect.size(projectile) : Math.random() * 10 + 5) * sizeFactor;
-            const effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / fpsFactor);
-            const effectSpeed = Math.ceil((effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2) * fpsFactor * particleSpeedFactor);
+            const effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / Math.pow(fpsFactor, 0.33));
+            const effectSpeed = Math.ceil((effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2) / Math.pow(fpsFactor, 0.33) * particleSpeedFactor);
 
             effects.push({
                 x: effect.x ? effect.x(projectile) : x, 
@@ -264,7 +325,7 @@ function createOnHitEffect(projectile) {
 
     // 存储命中动画的活跃状态，用于跟踪
     const damageTextLifespan = settingsMap.damageTextLifespan.value || 120;
-    const lifeSpan = Math.ceil(damageTextLifespan / fpsFactor);
+    const lifeSpan = Math.ceil(damageTextLifespan / Math.pow(fpsFactor, 0.33));
 
     const onHitEffectData = {
         effects: [...effects],
@@ -272,6 +333,7 @@ function createOnHitEffect(projectile) {
         lifespan: lifeSpan,
         color: color,
         otherInfo: otherInfo,
+        isFpsOptimized: true,
     };
  
     addEffect(onHitEffectData);
@@ -287,6 +349,16 @@ function updateOnHits() {
         if (effect.life >= effect.lifespan) {
             activeEffects.splice(i, 1);
             continue;
+        }
+
+        if (!effect.isFpsOptimized) {
+            const fpsFactor = getFpsFactor();
+            for (const e of effect.effects) {
+                e.speed *= fpsFactor;
+                e.life /= fpsFactor;
+            }
+            effect.lifespan /= fpsFactor;
+            effect.isFpsOptimized = true;
         }
 
         ctx.save();

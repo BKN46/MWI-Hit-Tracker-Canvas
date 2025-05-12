@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.1.2
+// @version        1.1.3
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1433,6 +1433,14 @@
 	    max: 5.0,
 	    step: 0.01
 	  },
+	  projectileTrailGap: {
+	    id: "projectileTrailGap",
+	    desc: isZH ? "弹道尾迹间隔" : "Projectile Trail Gap",
+	    value: 1.0,
+	    min: 0.05,
+	    max: 3.0,
+	    step: 0.05
+	  },
 	  originalDamageDisplay: {
 	    id: "originalDamageDisplay",
 	    desc: isZH ? "原版伤害显示" : "Original Damage Display",
@@ -1547,6 +1555,19 @@
 	    r: 255,
 	    g: 0,
 	    b: 0
+	  },
+	  renderFpsLimit: {
+	    id: "renderFpsLimit",
+	    desc: isZH ? "渲染帧数限制(非精确，刷新生效)" : "Render FPS Limit (Not accurate, restart required)",
+	    value: 160,
+	    min: 5,
+	    max: 300,
+	    step: 1
+	  },
+	  showFps: {
+	    id: "showFps",
+	    desc: isZH ? "显示帧数" : "Show FPS",
+	    value: false
 	  }
 	};
 	readSettings();
@@ -3364,7 +3385,8 @@
 	  active = true,
 	  lifespan = 120,
 	  color = "rgba(255, 255, 255, 0.8)",
-	  otherInfo = {}
+	  otherInfo = {},
+	  isFpsOptimization = false
 	}) {
 	  activeEffects.push({
 	    effects,
@@ -3372,7 +3394,8 @@
 	    life: 0,
 	    lifespan,
 	    color,
-	    otherInfo
+	    otherInfo,
+	    isFpsOptimization
 	  });
 	}
 	function clearEffects() {
@@ -3658,15 +3681,35 @@
 	function animate() {
 	  // 计算FPS
 	  const now = Date.now();
-	  const delta = now - fpsStatTime;
+	  const frameTime = now - fpsStatTime;
 	  fpsStatTime = now;
-	  const fpsNow = Math.round(1000 / delta);
+	  const fpsNow = Math.round(1000 / frameTime);
 	  fpsQueue.push(fpsNow);
-	  if (fpsQueue.length > 30) {
+	  if (fpsQueue.length > 120) {
 	    fpsQueue.shift();
 	  }
 	  fps = Math.round(fpsQueue.reduce((a, b) => a + b) / fpsQueue.length);
 	  fps = Math.min(Math.max(fps, 10), 300);
+	  if (settingsMap.showFps.value) {
+	    const fpsElement = document.querySelector('#hitTracker_fpsCounter');
+	    if (fpsElement) {
+	      fpsElement.innerText = `FPS: ${fps}`;
+	    } else {
+	      const parenetElement = document.querySelector(".BattlePanel_battleArea__U9hij");
+	      if (parenetElement) {
+	        const newFpsElement = document.createElement('div');
+	        const center = getElementCenter(parenetElement);
+	        newFpsElement.id = 'hitTracker_fpsCounter';
+	        newFpsElement.style.position = 'fixed';
+	        newFpsElement.style.top = `${center.x - parenetElement.innerWidth}px`;
+	        newFpsElement.style.left = `${center.y - parenetElement.innerHeight}px`;
+	        newFpsElement.style.color = 'rgba(200, 200, 200, 0.8)';
+	        newFpsElement.style.zIndex = '9999';
+	        newFpsElement.innerText = `FPS: ${fps}`;
+	        parenetElement.appendChild(newFpsElement);
+	      }
+	    }
+	  }
 
 	  // 完全清空画布
 	  ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -3687,7 +3730,16 @@
 
 	  // 更新和渲染所有爆炸效果
 	  updateOnHits();
-	  requestAnimationFrame(animate);
+	}
+	function startAnimation() {
+	  const fpsLimit = settingsMap.renderFpsLimit.value || 60;
+	  const fpsInterval = 1000 / fpsLimit;
+	  setInterval(() => {
+	    animate();
+	  }, fpsInterval);
+	}
+	function getFpsFactor() {
+	  return Math.min(Math.max(160 / fps, 0.125), 8);
 	}
 	class Projectile {
 	  constructor(startX, startY, endX, endY, color, initialSpeed = 1, size = 10, otherInfo = {}) {
@@ -3722,17 +3774,26 @@
 
 	    // 重新设计飞行时间计算，确保合理
 	    // const timeInAir = distance / this.initialSpeed / 10;
-	    let timeInAir = 80 / this.initialSpeed;
+	    this.timeInAir = 80 / this.initialSpeed;
 
 	    // FPS因子，确保在不同FPS下效果一致
-	    const fpsFactor = Math.min(Math.max(160 / fps, 0.125), 8);
-	    this.gravity *= fpsFactor;
-	    timeInAir /= fpsFactor;
+	    const fpsFactor = getFpsFactor();
+	    this.gravity *= Math.pow(fpsFactor, 2);
+	    this.timeInAir /= fpsFactor;
 
 	    // 计算初始速度，修正公式确保能够到达目标
 	    this.velocity = {
-	      x: dx / timeInAir,
-	      y: dy / timeInAir - this.gravity * timeInAir / 2
+	      x: dx / this.timeInAir,
+	      y: dy / this.timeInAir - this.gravity * this.timeInAir / 2
+	    };
+	    this.initialVelocity = {
+	      ...this.velocity
+	    };
+	    this.trajectory = time => {
+	      return {
+	        x: startX + this.initialVelocity.x * time,
+	        y: startY + this.initialVelocity.y * time + this.gravity * time * time / 2
+	      };
 	    };
 
 	    // 大小参数 (范围1-100)
@@ -3745,32 +3806,50 @@
 
 	    // 拖尾效果
 	    this.trail = [];
+	    this.independentTrail = this.effect.independentTrail || false; // 是否独立拖尾
 	    this.maxTrailLength = Math.floor((this.effect.trailLength || 35) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
 	    this.maxTrailLength *= settingsMap.projectileTrailLength.value || 1; // 拖尾缩放因子
+	    this.trailGap = (settingsMap.projectileTrailGap.value || 1) / fpsFactor;
 	  }
 	  update() {
-	    // 更新速度 (考虑重力)
-	    this.velocity.y += this.gravity;
 	    this.life += 1;
-
-	    // 更新位置
-	    this.x += this.velocity.x;
-	    this.y += this.velocity.y;
+	    const pos = this.trajectory(this.life);
+	    this.velocity.y += this.gravity;
+	    this.x = pos.x;
+	    this.y = pos.y;
 
 	    // 更新拖尾
-	    if (this.effect.trailLength > 0) {
-	      this.trail.push({
-	        x: this.x,
-	        y: this.y,
-	        vX: this.velocity.x,
-	        vY: this.velocity.y,
-	        color: this.color,
-	        size: this.size,
-	        totalLength: Math.max(this.trail.length, 1)
-	      });
-	    }
-	    if (this.trail.length > this.maxTrailLength) {
-	      this.trail.shift();
+	    if (this.independentTrail) {
+	      if (this.effect.trailLength > 0) {
+	        this.trail.push({
+	          x: this.x,
+	          y: this.y,
+	          vX: this.velocity.x,
+	          vY: this.velocity.y,
+	          color: this.color,
+	          size: this.size,
+	          totalLength: Math.max(this.trail.length, 1)
+	        });
+	      }
+	      if (this.trail.length > this.maxTrailLength) {
+	        this.trail.shift();
+	      }
+	    } else {
+	      this.trail = [];
+	      for (let i = 0; i < this.maxTrailLength; i++) {
+	        const trailTime = this.life - (this.maxTrailLength - i - 1) * this.trailGap;
+	        if (trailTime <= 0) break;
+	        const trailPos = this.trajectory(trailTime);
+	        this.trail.push({
+	          x: trailPos.x,
+	          y: trailPos.y,
+	          vX: this.velocity.x,
+	          vY: this.velocity.y,
+	          color: this.color,
+	          size: this.size,
+	          totalLength: this.maxTrailLength
+	        });
+	      }
 	    }
 	  }
 	  draw(canvas) {
@@ -3797,6 +3876,8 @@
 	  }
 	  isArrived() {
 	    if (this.life >= this.timeInAir) {
+	      this.x = this.target.x;
+	      this.y = this.target.y;
 	      return true;
 	    }
 	    // 判断是否到达目标点 (调整判定距离)
@@ -3834,7 +3915,7 @@
 	  const particleFactor = settingsMap.particleEffectRatio.value || 1;
 	  const particleSpeedFactor = settingsMap.particleSpeedRatio.value || 1;
 	  const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
-	  const fpsFactor = Math.min(Math.max(160 / fps, 0.125), 8);
+	  const fpsFactor = getFpsFactor();
 	  const effects = [];
 	  let onHitEffect = projectile.effect.onHit;
 	  if (projectile.otherInfo.isCrit) {
@@ -3850,8 +3931,8 @@
 	    const effectCount = Math.ceil(onHitEffect[effectName](projectile.size) * particleFactor);
 	    for (let i = 0; i < effectCount; i++) {
 	      const effectSize = (effect.size ? effect.size(projectile) : Math.random() * 10 + 5) * sizeFactor;
-	      const effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / fpsFactor);
-	      const effectSpeed = Math.ceil((effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2) * fpsFactor * particleSpeedFactor);
+	      const effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / Math.pow(fpsFactor, 0.33));
+	      const effectSpeed = Math.ceil((effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2) / Math.pow(fpsFactor, 0.33) * particleSpeedFactor);
 	      effects.push({
 	        x: effect.x ? effect.x(projectile) : x,
 	        y: effect.y ? effect.y(projectile) : y,
@@ -3870,13 +3951,14 @@
 
 	  // 存储命中动画的活跃状态，用于跟踪
 	  const damageTextLifespan = settingsMap.damageTextLifespan.value || 120;
-	  const lifeSpan = Math.ceil(damageTextLifespan / fpsFactor);
+	  const lifeSpan = Math.ceil(damageTextLifespan / Math.pow(fpsFactor, 0.33));
 	  const onHitEffectData = {
 	    effects: [...effects],
 	    active: true,
 	    lifespan: lifeSpan,
 	    color: color,
-	    otherInfo: otherInfo
+	    otherInfo: otherInfo,
+	    isFpsOptimized: true
 	  };
 	  addEffect(onHitEffectData);
 	}
@@ -3890,6 +3972,15 @@
 	    if (effect.life >= effect.lifespan) {
 	      activeEffects.splice(i, 1);
 	      continue;
+	    }
+	    if (!effect.isFpsOptimized) {
+	      const fpsFactor = getFpsFactor();
+	      for (const e of effect.effects) {
+	        e.speed *= fpsFactor;
+	        e.life /= fpsFactor;
+	      }
+	      effect.lifespan /= fpsFactor;
+	      effect.isFpsOptimized = true;
 	    }
 	    ctx.save();
 
@@ -4251,7 +4342,7 @@
 	}
 
 	// 启动动画
-	animate();
+	startAnimation();
 
 	exports.registProjectile = registProjectile;
 

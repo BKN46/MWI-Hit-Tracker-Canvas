@@ -6,6 +6,7 @@ export function addEffect({
     lifespan = 120,
     color = "rgba(255, 255, 255, 0.8)",
     otherInfo = {},
+    isFpsOptimization = false,
 }) {
     activeEffects.push({
         effects,
@@ -14,6 +15,7 @@ export function addEffect({
         lifespan,
         color,
         otherInfo,
+        isFpsOptimization,
     });
 }
 
