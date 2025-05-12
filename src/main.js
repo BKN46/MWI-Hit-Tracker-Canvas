@@ -44,10 +44,6 @@ function hookWS() {
         const message = oriGet.call(this);
         Object.defineProperty(this, "data", { value: message }); // Anti-loop
 
-        if (isPageHidden) {
-            return message;
-        }
-
         try {
             return handleMessage(message);
         } catch (error) {
@@ -253,6 +249,10 @@ export function registProjectile({
     isCrit = false,
     isKill = false,
 }) {
+    if (isPageHidden) {
+        return;
+    }
+
     if (reversed){
         if (settingsMap.tracker6 && !settingsMap.tracker6.isTrue) {
             return null;
