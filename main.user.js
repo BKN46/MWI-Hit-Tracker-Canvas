@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.1.3
+// @version        1.1.4
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1469,6 +1469,14 @@
 	    min: 0.0,
 	    max: 1.0,
 	    step: 0.01
+	  },
+	  damageTextSizeMinimal: {
+	    id: "damageTextSizeMinimal",
+	    desc: isZH ? "伤害文本尺寸最小值" : "Damage Text Size Minimal",
+	    value: 14,
+	    min: 5,
+	    max: 100,
+	    step: 1
 	  },
 	  damageTextSizeLimit: {
 	    id: "damageTextSizeLimit",
@@ -3992,9 +4000,10 @@
 	    // 伤害文本
 	    if (effect.otherInfo && effect.otherInfo.damage) {
 	      const fontSizeScale = settingsMap.damageTextScale.value || 1;
+	      const fontSizeMinimal = settingsMap.damageTextSizeMinimal.value || 14;
 	      const fontSizeLimit = settingsMap.damageTextSizeLimit.value || 70;
 	      const fontAlpha = settingsMap.damageTextAlpha.value || 0.8;
-	      const fontSize = Math.min(Math.max(14, Math.pow(effect.otherInfo.damage, 0.65) / 2 * fontSizeScale), fontSizeLimit);
+	      const fontSize = Math.min(Math.max(fontSizeMinimal, Math.pow(effect.otherInfo.damage, 0.65) / 2 * fontSizeScale), fontSizeLimit);
 	      const damageText = `${effect.otherInfo.damage}`;
 	      ctx.font = `${fontSize}px Arial`;
 	      ctx.textAlign = 'center';

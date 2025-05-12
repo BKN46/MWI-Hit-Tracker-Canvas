@@ -119,6 +119,14 @@ export let settingsMap = {
         max: 1.0,
         step: 0.01,
     },
+    damageTextSizeMinimal: {
+        id: "damageTextSizeMinimal",
+        desc: isZH ? "伤害文本尺寸最小值":"Damage Text Size Minimal",
+        value: 14,
+        min: 5,
+        max: 100,
+        step: 1,
+    },
     damageTextSizeLimit: {
         id: "damageTextSizeLimit",
         desc: isZH ? "伤害文本尺寸上限":"Damage Text Size Limit",

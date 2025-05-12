@@ -371,10 +371,11 @@ function updateOnHits() {
         // 伤害文本
         if (effect.otherInfo && effect.otherInfo.damage) {
             const fontSizeScale = settingsMap.damageTextScale.value || 1;
+            const fontSizeMinimal = settingsMap.damageTextSizeMinimal.value || 14;
             const fontSizeLimit = settingsMap.damageTextSizeLimit.value || 70;
             const fontAlpha = settingsMap.damageTextAlpha.value || 0.8;
 
-            const fontSize=  Math.min(Math.max(14, Math.pow(effect.otherInfo.damage,0.65)/2*fontSizeScale), fontSizeLimit);
+            const fontSize=  Math.min(Math.max(fontSizeMinimal, Math.pow(effect.otherInfo.damage,0.65)/2*fontSizeScale), fontSizeLimit);
             const damageText = `${effect.otherInfo.damage}`
             ctx.font = `${fontSize}px Arial`;
             ctx.textAlign = 'center';
