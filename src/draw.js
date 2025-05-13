@@ -318,6 +318,7 @@ function createOnHitEffect(projectile) {
                 life: effectLife,
                 maxLife: effectLife,
                 color: effect.color ? effect.color(projectile) : projectile.color,
+                fpsFactor: fpsFactor,
                 draw: effect.draw ? effect.draw : (ctx, p) => {},
             });
         }
@@ -356,6 +357,7 @@ function updateOnHits() {
             for (const e of effect.effects) {
                 e.speed *= fpsFactor;
                 e.life /= fpsFactor;
+                e.fpsFactor = fpsFactor;
             }
             effect.lifespan /= fpsFactor;
             effect.isFpsOptimized = true;
