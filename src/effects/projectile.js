@@ -250,7 +250,7 @@ export const projectileEffectsMap = {
         trailLength: 3,
         shake: true,
         onHit: {
-            "pixelSmoke": (size) => Math.min(Math.ceil(size * 80), 50),
+            "crescentSlash": (size) => Math.min(Math.ceil(size * 3), 6),
         },
         draw: (ctx, p) => {
             ctx.beginPath();
@@ -524,17 +524,108 @@ export const projectileEffectsMap = {
         }
     },
     'fireTornado': {
-        speedFactor: 2,
-        trailLength: 3,
+        speedFactor: 1,
+        trailLength: 40,
         shake: true,
         onHit: {
+            "smoke": (size) => Math.min(Math.ceil(size * 10), 10),
             "tornado": (size) => Math.min(Math.ceil(size * 5), 8),
+            
         },
         draw: (ctx, p) => {
+            // Draw main projectile
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
             ctx.fillStyle = p.color;
             ctx.fill();
+
+            // Create inner glow gradient
+            const innerGlow = ctx.createRadialGradient(
+                p.x, p.y, 0,
+                p.x, p.y, p.size * 1.5
+            );
+            innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            innerGlow.addColorStop(0.5, p.color);
+            innerGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = innerGlow;
+            ctx.fill();
         },
+        glow: (ctx, p) => {
+            // Create outer glow gradient
+            const outerGlow = ctx.createRadialGradient(
+                p.x, p.y, p.size * 1.5,
+                p.x, p.y, p.size * 3
+            );
+            outerGlow.addColorStop(0, p.color);
+            // outerGlow.addColorStop(0.5, 'rgba(250, 178, 24, 0.2)');
+            outerGlow.addColorStop(1, 'rgba(255, 50, 0, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+            ctx.fillStyle = outerGlow;
+            ctx.fill();
+
+            // Add pulsing effect
+            const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
+            const pulseGlow = ctx.createRadialGradient(
+                p.x, p.y, p.size * 2,
+                p.x, p.y, pulseSize
+            );
+            pulseGlow.addColorStop(0, changeColorAlpha(p.color, 0.1));
+            pulseGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+            ctx.fillStyle = pulseGlow;
+            ctx.fill();
+        },
+        trail: (ctx, p, i) => {
+            const alpha = i / p.totalLength;
+            const trailSize = p.size * alpha;
+
+            // Create glowing trail gradient
+            // const trailGlow = ctx.createRadialGradient(
+            //     p.x, p.y, 0,
+            //     p.x, p.y, trailSize * 2
+            // );
+            // trailGlow.addColorStop(0, changeColorAlpha(p.color, alpha));
+            // trailGlow.addColorStop(1, changeColorAlpha(p.color, 0));
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+            ctx.fillStyle = changeColorAlpha(p.color, alpha);
+            ctx.fill();
+        }
     },
+    'blunt': {
+        speedFactor: 1,
+        trailLength: 20,
+        shake: true,
+        onHit: {
+            "shatter": (size) => Math.min(Math.ceil(size * 5), 10),
+            "shockwave": (size) => Math.min(Math.ceil(size * 2), 6),
+        },
+        
+        trail: (ctx, p, i) => {
+            const alpha = i / p.totalLength;
+            const trailSize = p.size * alpha;
+
+            // Create glowing trail gradient
+            // const trailGlow = ctx.createRadialGradient(
+            //     p.x, p.y, 0,
+            //     p.x, p.y, trailSize * 2
+            // );
+            // trailGlow.addColorStop(0, changeColorAlpha(p.color, alpha));
+            // trailGlow.addColorStop(1, changeColorAlpha(p.color, 0));
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+            ctx.fillStyle = changeColorAlpha(p.color, alpha);
+            ctx.fill();
+        }
+        
+    }
 }
