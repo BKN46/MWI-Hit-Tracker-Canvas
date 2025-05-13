@@ -10,24 +10,26 @@ export const onHitEffectsMap = {
     "smoke": {
         angle: (p) => Math.random() * Math.PI * 2,
         alpha: (p) => 0.7,
-        speed: (p) => (Math.random() * 0.2 + 0.1) * Math.sqrt(p.size),
+        speed: (p) => (Math.random() * 0.05 + 0.02) * Math.sqrt(p.size),
         size: (p) => (Math.random() * 20 + 10) * p.size,
         life: (p) => 4000 * Math.sqrt(p.size),
-        gravity: (p) => -0.2 * Math.sqrt(p.size),
+        gravity: (p) => -0.04 * Math.sqrt(p.size),
         draw: (ctx, p) => {
             if (!p.initialized) {
                 p.initialized = true;
-                p.y -= 5 * p.size;
-                p.sizeVariation = Math.random() * 0.2 + 0.9; // Size variation for billowing effect
-                p.rotationSpeed = (Math.random() - 0.5) * 0.02; // Slow rotation
+                p.y -= 3 * p.size;
+                p.sizeVariation = Math.random() * 0.2 + 0.9;
+                p.rotationSpeed = (Math.random() - 0.5) * 0.005;
                 p.rotation = Math.random() * Math.PI * 2;
+                p.verticalSpeed = 0;
             }
 
-            p.speed *= 0.995; // Slower deceleration
+            p.speed *= 0.999;
+            p.verticalSpeed += p.gravity;
             p.x += Math.cos(p.angle) * p.speed;
-            p.y += Math.sin(p.angle) * p.speed + p.gravity;
+            p.y += Math.sin(p.angle) * p.speed + p.verticalSpeed;
             p.life -= 1;
-            p.alpha = Math.max(0, p.alpha - 0.001);
+            p.alpha = Math.max(0, p.alpha - 0.0003);
             p.rotation += p.rotationSpeed;
             
             if (p.life > 0) {
@@ -201,76 +203,76 @@ export const onHitEffectsMap = {
         }
     },
     "slash": {
-        // Main slash effect
-        x: p => p.x,
-        y: p => p.y,
-        angle: p => Math.random() * Math.PI * 2,
-        size: p => 3 * p.size,
-        life: p => 300 * p.size, 
-        draw: (ctx, p) => {
-            if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
-            if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
-            p.life -= 2; // Even slower fade
-            
-            if (p.life > 0) {
-                const alpha = p.life / 300 * p.size;
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.angle);
+            // Main slash effect
+            x: p => p.x,
+            y: p => p.y,
+            angle: p => Math.random() * Math.PI * 2,
+            size: p => 3 * p.size,
+            life: p => 300 * p.size, 
+            draw: (ctx, p) => {
+                if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
+                if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
+                p.life -= 2; // Even slower fade
+                
+                if (p.life > 0) {
+                    const alpha = p.life / 300 * p.size;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.angle);
 
-                // Draw main slash line with improved tapered shape
-                ctx.beginPath();
-                ctx.moveTo(-p.length/2, 0);
-                ctx.quadraticCurveTo(
-                    -p.length/4, -p.maxWidth * 0.6,
-                    -p.length/6, -p.maxWidth
-                );
-                ctx.lineTo(p.length/6, -p.maxWidth);
-                ctx.quadraticCurveTo(
-                    p.length/4, -p.maxWidth * 0.6,
-                    p.length/2, 0
-                );
-                ctx.quadraticCurveTo(
-                    p.length/4, p.maxWidth * 0.6,
-                    p.length/6, p.maxWidth
-                );
-                ctx.lineTo(-p.length/6, p.maxWidth);
-                ctx.quadraticCurveTo(
-                    -p.length/4, p.maxWidth * 0.6,
-                    -p.length/2, 0
-                );
-                ctx.closePath();
-                ctx.fillStyle = p.color.replace('0.9', alpha.toString());
-                ctx.fill();
+                    // Draw main slash line with improved tapered shape
+                    ctx.beginPath();
+                    ctx.moveTo(-p.length/2, 0);
+                    ctx.quadraticCurveTo(
+                        -p.length/4, -p.maxWidth * 0.6,
+                        -p.length/6, -p.maxWidth
+                    );
+                    ctx.lineTo(p.length/6, -p.maxWidth);
+                    ctx.quadraticCurveTo(
+                        p.length/4, -p.maxWidth * 0.6,
+                        p.length/2, 0
+                    );
+                    ctx.quadraticCurveTo(
+                        p.length/4, p.maxWidth * 0.6,
+                        p.length/6, p.maxWidth
+                    );
+                    ctx.lineTo(-p.length/6, p.maxWidth);
+                    ctx.quadraticCurveTo(
+                        -p.length/4, p.maxWidth * 0.6,
+                        -p.length/2, 0
+                    );
+                    ctx.closePath();
+                    ctx.fillStyle = p.color.replace('0.9', alpha.toString());
+                    ctx.fill();
 
-                // Enhanced glow effect
-                ctx.beginPath();
-                ctx.moveTo(-p.length/2, 0);
-                ctx.quadraticCurveTo(
-                    -p.length/4, -p.maxWidth * 0.8,
-                    -p.length/6, -p.maxWidth * 1.5
-                );
-                ctx.lineTo(p.length/6, -p.maxWidth * 1.5);
-                ctx.quadraticCurveTo(
-                    p.length/4, -p.maxWidth * 0.8,
-                    p.length/2, 0
-                );
-                ctx.quadraticCurveTo(
-                    p.length/4, p.maxWidth * 0.8,
-                    p.length/6, p.maxWidth * 1.5
-                );
-                ctx.lineTo(-p.length/6, p.maxWidth * 1.5);
-                ctx.quadraticCurveTo(
-                    -p.length/4, p.maxWidth * 0.8,
-                    -p.length/2, 0
-                );
-                ctx.closePath();
-                ctx.fillStyle = p.color.replace('0.9', (alpha * 0.3).toString());
-                ctx.fill();
+                    // Enhanced glow effect
+                    ctx.beginPath();
+                    ctx.moveTo(-p.length/2, 0);
+                    ctx.quadraticCurveTo(
+                        -p.length/4, -p.maxWidth * 0.8,
+                        -p.length/6, -p.maxWidth * 1.5
+                    );
+                    ctx.lineTo(p.length/6, -p.maxWidth * 1.5);
+                    ctx.quadraticCurveTo(
+                        p.length/4, -p.maxWidth * 0.8,
+                        p.length/2, 0
+                    );
+                    ctx.quadraticCurveTo(
+                        p.length/4, p.maxWidth * 0.8,
+                        p.length/6, p.maxWidth * 1.5
+                    );
+                    ctx.lineTo(-p.length/6, p.maxWidth * 1.5);
+                    ctx.quadraticCurveTo(
+                        -p.length/4, p.maxWidth * 0.8,
+                        -p.length/2, 0
+                    );
+                    ctx.closePath();
+                    ctx.fillStyle = p.color.replace('0.9', (alpha * 0.3).toString());
+                    ctx.fill();
 
-                ctx.restore();
+                    ctx.restore();
+                }
             }
-        }
     },
     "slashParticle": {
         // Enhanced particle effect for slash
@@ -614,7 +616,7 @@ export const onHitEffectsMap = {
                     bubble.y -= bubble.speed;
                     bubble.wobble += bubble.wobbleSpeed;
                     bubble.x += Math.sin(bubble.wobble) * 0.5;
-
+                    
                     ctx.beginPath();
                     ctx.arc(bubble.x, bubble.y, bubble.size, 0, Math.PI * 2);
                     ctx.fillStyle = changeColorAlpha(p.color, alpha);
@@ -646,56 +648,56 @@ export const onHitEffectsMap = {
             const alpha = Math.pow(lifeRatio, 0.2);
 
             if (p.life > 0) {
-                ctx.save();
+                    ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.angle + Math.PI/2);
 
-                ctx.beginPath();
+                    ctx.beginPath();
                 ctx.moveTo(0, -p.length/2);
                 ctx.lineTo(p.size/2, 0);
                 ctx.lineTo(0, p.length/2);
                 ctx.lineTo(-p.size/2, 0);
-                ctx.closePath();
-                
+                    ctx.closePath();
+                    
                 ctx.fillStyle = changeColorAlpha(p.color, alpha);
-                ctx.fill();
+                    ctx.fill();
                 ctx.strokeStyle = changeColorAlpha(p.color, alpha);
-                ctx.lineWidth = 2;
-                ctx.stroke();
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
 
-                // Add white glow
-                ctx.beginPath();
+                    // Add white glow
+                    ctx.beginPath();
                 ctx.moveTo(0, -p.length/2);
                 ctx.lineTo(p.size/2, 0);
                 ctx.lineTo(0, p.length/2);
                 ctx.lineTo(-p.size/2, 0);
-                ctx.closePath();
-                
-                // Create gradient for glow
+                    ctx.closePath();
+                    
+                    // Create gradient for glow
                 const gradient = ctx.createLinearGradient(0, -p.length/2, 0, p.length/2);
-                gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.8})`);
-                gradient.addColorStop(0.5, `rgba(255, 255, 255, ${alpha * 0.4})`);
-                gradient.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.8})`);
-                
-                ctx.fillStyle = gradient;
-                ctx.fill();
+                    gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.8})`);
+                    gradient.addColorStop(0.5, `rgba(255, 255, 255, ${alpha * 0.4})`);
+                    gradient.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.8})`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
 
-                // Add shiny highlight
-                ctx.beginPath();
+                    // Add shiny highlight
+                    ctx.beginPath();
                 ctx.moveTo(-p.size/4, -p.length/4);
                 ctx.lineTo(p.size/4, -p.length/4);
-                ctx.lineTo(0, 0);
-                ctx.closePath();
-                
+                    ctx.lineTo(0, 0);
+                    ctx.closePath();
+                    
                 const highlightGradient = ctx.createLinearGradient(-p.size/4, -p.length/4, 0, 0);
-                highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
-                highlightGradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
-                
-                ctx.fillStyle = highlightGradient;
-                ctx.fill();
+                    highlightGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
+                    highlightGradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+                    
+                    ctx.fillStyle = highlightGradient;
+                    ctx.fill();
 
-                ctx.restore();
-            }
+                    ctx.restore();
+                }
         }
     },
     "lava": {
@@ -732,95 +734,95 @@ export const onHitEffectsMap = {
             p.life -= 1;
             p.rotation += p.rotationSpeed;
             p.time += 0.15;
-            
+                
             const lifeRatio = p.life / p.maxLife;
             const opacity = lifeRatio * 0.8;
             const sizeReduction = Math.pow(lifeRatio, 0.1);
             p.size = Math.min(p.size * sizeReduction, p.oringinalSize);
 
             if (p.life > 0) {
-                ctx.save();
+                    ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.rotation);
-                
-                // Enable blending for better transparency
-                ctx.globalCompositeOperation = 'lighter';
-                
-                // Draw base particle shape
-                ctx.beginPath();
+                    
+                    // Enable blending for better transparency
+                    ctx.globalCompositeOperation = 'lighter';
+                    
+                    // Draw base particle shape
+                    ctx.beginPath();
                 for (let i = 0; i < p.numPoints; i++) {
                     const angle = (i / p.numPoints) * Math.PI * 2;
                     const noise = Math.sin(angle + p.noiseOffsets[i] + p.time * p.noiseSpeeds[i]) * 
                                 p.noiseAmplitudes[i];
                     const surfaceTension = Math.sin(angle * 3 + p.time * 0.5) * 0.15;
                     const radius = p.size * (1 + noise * 0.2 + surfaceTension);
-                    const x = Math.cos(angle) * radius;
-                    const y = Math.sin(angle) * radius;
-                    
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
                         const prevAngle = ((i - 1) / p.numPoints) * Math.PI * 2;
                         const prevNoise = Math.sin(prevAngle + p.noiseOffsets[i-1] + p.time * p.noiseSpeeds[i-1]) * 
                                         p.noiseAmplitudes[i-1];
                         const prevSurfaceTension = Math.sin(prevAngle * 3 + p.time * 0.5) * 0.15;
                         const prevRadius = p.size * (1 + prevNoise * 0.2 + prevSurfaceTension);
-                        const prevX = Math.cos(prevAngle) * prevRadius;
-                        const prevY = Math.sin(prevAngle) * prevRadius;
-                        
-                        const cpX = (prevX + x) / 2;
-                        const cpY = (prevY + y) / 2;
-                        ctx.quadraticCurveTo(cpX, cpY, x, y);
+                            const prevX = Math.cos(prevAngle) * prevRadius;
+                            const prevY = Math.sin(prevAngle) * prevRadius;
+                            
+                            const cpX = (prevX + x) / 2;
+                            const cpY = (prevY + y) / 2;
+                            ctx.quadraticCurveTo(cpX, cpY, x, y);
+                        }
                     }
-                }
-                ctx.closePath();
-                
-                // Draw particle with glow effects
-                // Base layer with reduced opacity
+                    ctx.closePath();
+                    
+                    // Draw particle with glow effects
+                    // Base layer with reduced opacity
                 ctx.fillStyle = changeColorAlpha(p.color, opacity);
-                ctx.fill();
-                
-                // Glow layers with adjusted opacity
-                const drawGlowLayer = (radius, color, alpha) => {
-                    ctx.beginPath();
-                    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = changeColorAlpha(p.color, opacity);
                     ctx.fill();
-                };
-                
-                // Core and inner glow with reduced opacity
+                    
+                    // Glow layers with adjusted opacity
+                    const drawGlowLayer = (radius, color, alpha) => {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = changeColorAlpha(p.color, opacity);
+                        ctx.fill();
+                    };
+                    
+                    // Core and inner glow with reduced opacity
                 drawGlowLayer(p.size * 0.6, 'rgba(255, 255, 255, 0.8)', 0.4);
                 drawGlowLayer(p.size * (1.2 + Math.sin(p.time * 0.5) * 0.2), 'rgba(255, 200, 50, 0.8)', 0.25);
-                
-                // Middle aura with softer gradient
+                    
+                    // Middle aura with softer gradient
                 const middleGlow = ctx.createRadialGradient(0, 0, p.size, 0, 0, p.size * 2);
                 middleGlow.addColorStop(0, changeColorAlpha(p.color, opacity * 0.2));
-                middleGlow.addColorStop(0.5, `rgba(255, 50, 0, ${opacity * 0.1})`);
-                middleGlow.addColorStop(1, `rgba(255, 0, 0, 0)`);
-                
-                ctx.beginPath();
+                    middleGlow.addColorStop(0.5, `rgba(255, 50, 0, ${opacity * 0.1})`);
+                    middleGlow.addColorStop(1, `rgba(255, 0, 0, 0)`);
+                    
+                    ctx.beginPath();
                 ctx.arc(0, 0, p.size * 2, 0, Math.PI * 2);
-                ctx.fillStyle = middleGlow;
-                ctx.fill();
-                
-                // Outer aura with softer gradient
-                const outerGlow = ctx.createRadialGradient(
+                    ctx.fillStyle = middleGlow;
+                    ctx.fill();
+                    
+                    // Outer aura with softer gradient
+                    const outerGlow = ctx.createRadialGradient(
                     0, 0, p.size * 1.5,
                     0, 0, p.size * (2.5 + Math.sin(p.time * 0.5) * 0.3)
-                );
+                    );
                 outerGlow.addColorStop(0, changeColorAlpha(p.color, opacity * 0.1));
-                outerGlow.addColorStop(0.5, `rgba(200, 0, 0, ${opacity * 0.03})`);
-                outerGlow.addColorStop(1, `rgba(150, 0, 0, 0)`);
-                
-                ctx.beginPath();
+                    outerGlow.addColorStop(0.5, `rgba(200, 0, 0, ${opacity * 0.03})`);
+                    outerGlow.addColorStop(1, `rgba(150, 0, 0, 0)`);
+                    
+                    ctx.beginPath();
                 ctx.arc(0, 0, p.size * (2.5 + Math.sin(p.time * 0.5) * 0.3), 0, Math.PI * 2);
-                ctx.fillStyle = outerGlow;
-                ctx.fill();
-                
-                // Reset composite operation
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.restore();
-            }
+                    ctx.fillStyle = outerGlow;
+                    ctx.fill();
+                    
+                    // Reset composite operation
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.restore();
+                }
         }
     },
     "tornado": {
@@ -962,4 +964,203 @@ export const onHitEffectsMap = {
             }
         }
     },
+    "shatter": {
+        x: p => p.x,
+        y: p => p.y,
+        size: p =>(1 * Math.random() + 5) * p.size,
+        life: p => 1000 * p.size,
+        draw: (ctx, p) => {
+            if (!p.initialized) {
+                p.initialized = true;
+                p.particles = [];
+                // Create particles in a circular pattern
+                const particleCount = Math.max(2, Math.min(0.1, Math.floor(p.size * 1))); // Scale particle count with size
+                
+                // Define the main direction and spread
+                const mainAngle = Math.random() * Math.PI * 2; // Random main direction
+                const spreadAngle = Math.PI / 3; // 60 degree spread
+                
+                for (let i = 0; i < particleCount; i++) {
+                    // Calculate angle within the spread range
+                    const angleProgress = i / (particleCount - 1);
+                    const angleVariation = (Math.random() - 0.5) * 0.3; // Small random variation
+                    const finalAngle = mainAngle - spreadAngle/2 + (spreadAngle * angleProgress) + angleVariation;
+                    
+                    // Create size variation
+                    const sizeVariation = Math.random() * 0.8 + 0.6; // More consistent size
+                    const baseSize = (Math.random() * 0.6 + 5) * p.size;
+                    
+                    // Generate initial radius variations for each point
+                    const points = Math.floor(Math.random() * 3) + 3;
+                    const radiusVariations = Array.from({length: points}, () => 0.7 + Math.random() * 0.6);
+                    
+                    p.particles.push({
+                        x: p.x,
+                        y: p.y,
+                        angle: finalAngle,
+                        speed: (Math.random() * 2 + 1) * Math.sqrt(p.size), // Reduced initial speed
+                        size: baseSize * sizeVariation,
+                        initialSize: baseSize * sizeVariation,
+                        life: 1000 * p.size,
+                        maxLife: 1000 * p.size,
+                        gravity: 0.1,
+                        points: points,
+                        shapeAngle: Math.floor(Math.random() * 6),
+                        rotationSpeed: (Math.random() - 0.5) * 0.05, // Add rotation speed
+                        radiusVariations: radiusVariations,
+                        verticalSpeed: 0 // Add vertical speed for better gravity effect
+                    });
+                }
+            }
+
+            p.life -= 2;
+            
+            // Update and draw particles
+            p.particles.forEach(particle => {
+                // Update vertical speed with gravity
+                particle.verticalSpeed += particle.gravity;
+                
+                // Update position with both horizontal and vertical movement
+                particle.speed *= 0.98; // Slower deceleration
+                particle.x += Math.cos(particle.angle) * particle.speed;
+                particle.y += Math.sin(particle.angle) * particle.speed + particle.verticalSpeed;
+                
+                // Update rotation
+                particle.shapeAngle += particle.rotationSpeed;
+                
+                particle.life -= 2;
+                
+                const lifeRatio = particle.life / particle.maxLife;
+                const opacity = Math.pow(lifeRatio, 0.5);
+                particle.size = particle.initialSize * Math.pow(lifeRatio, 2);
+
+                if (particle.life > 0) {
+                    ctx.save();
+                    ctx.translate(particle.x, particle.y);
+                    
+                    // Draw irregular shape with stored radius variations
+                    ctx.rotate(particle.shapeAngle);
+                    ctx.beginPath();
+                    for (let i = 0; i < particle.points; i++) {
+                        const angle = (i * 2 * Math.PI) / particle.points - Math.PI / 2;
+                        const radius = particle.size * particle.radiusVariations[i];
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.closePath();
+                    ctx.fillStyle = p.color.replace('0.2', opacity.toString());
+                    ctx.fill();
+                    
+                    ctx.restore();
+                }
+            });
+        }
+    },
+    "crescentSlash": {
+        x: p => p.x,
+        y: p => p.y,
+        size: p => 10 * p.size, // Reduced base size
+        life: p => 1200 * p.size,
+        speed: p => (Math.random() * 10 + 4) * Math.sqrt(p.size) * 0.01,
+        angle: p => Math.random() * Math.PI * 2,
+        curveAmount: p => 5.3 * p.size * 2,
+        distance: p => 60 * p.size,
+        alpha: p => 0.8,
+        draw: (ctx, p) => {
+            if (!p.initialized) {
+                p.initialized = true;
+                p.trail = [];
+                p.fadeStartTime = 0;
+                p.isSlashing = true;
+                p.progress = 0;
+                p.speed = (Math.random() * 10 + 4) * Math.sqrt(p.size) * 0.01;
+                p.angle = Math.random() * Math.PI * 2;
+                p.curveAmount = 5.3 * p.size * 2;
+                p.distance = 60 * p.size;
+
+                p.totalPoints = Math.max(30, Math.min(100, Math.floor(p.distance / 2)));
+            }
+
+            p.life -= 3;
+            const alpha = Math.min(1, p.life / 600);
+
+            if (p.life > 0) {
+                if (p.isSlashing) {
+                    p.progress = Math.min(1, p.progress + p.speed);
+                    
+                    p.trail = [];
+                    const currentPoints = Math.floor(p.totalPoints * p.progress);
+                    
+                    for (let i = 0; i < currentPoints; i++) {
+                        const progress = (i / p.totalPoints) - 0.5;
+                        const distance = progress * p.distance;
+                        
+                        // Calculate base position
+                        let x = Math.cos(p.angle) * distance;
+                        let y = Math.sin(p.angle) * distance;
+                        
+                        // Add crescent curve
+                        const curveOffset = Math.sin((progress + 0.5) * Math.PI) * p.curveAmount;
+                        x += Math.cos(p.angle + Math.PI/2) * curveOffset;
+                        y += Math.sin(p.angle + Math.PI/2) * curveOffset;
+                        
+                        let size = p.size * 1.2; // Reduced multiplier
+                        if (progress < -0.2) {
+                            size = p.size * (0.3 + (progress + 0.5) * 3); // Reduced size scaling
+                        } else if (progress > 0.2) {
+                            size = p.size * (1.2 - (progress - 0.2) * 3); // Reduced size scaling
+                        }
+                        
+                        p.trail.push({
+                            x: x,
+                            y: y,
+                            size: size,
+                            alpha: 1,
+                            age: 0
+                        });
+                    }
+                    
+                    if (p.progress >= 1) {
+                        p.isSlashing = false;
+                        p.fadeStartTime = Date.now();
+                    }
+                }
+                
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                
+                for (let i = 0; i < p.trail.length; i++) {
+                    const point = p.trail[i];
+                    
+                    let pointAlpha;
+                    if (p.isSlashing) {
+                        pointAlpha = Math.exp(-point.age / 150) * alpha;
+                        point.age += 0.5;
+                    } else {
+                        const timeSinceFade = Date.now() - p.fadeStartTime;
+                        const fadeProgress = timeSinceFade / 1000;
+                        pointAlpha = Math.exp(-fadeProgress * 2) * alpha;
+                    }
+                    
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+                    ctx.fillStyle = changeColorAlpha(p.color, pointAlpha);
+                    ctx.fill();
+                    
+                    if ((p.isSlashing && point.age >= 200) || 
+                        (!p.isSlashing && (Date.now() - p.fadeStartTime) >= 1000)) {
+                        p.trail.splice(i, 1);
+                        i--;
+                    }
+                }
+                
+                ctx.restore();
+            }
+        }
+    }
 }

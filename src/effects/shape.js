@@ -80,5 +80,71 @@ export const shapes = {
         ctx.fillStyle = p.color;
         ctx.fill();
         ctx.restore();
+    },
+    "pentagon": (ctx, p={}) => {
+        // {x, y, size, color, angle}
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle || 0);
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+            const x = Math.cos(angle) * p.size;
+            const y = Math.sin(angle) * p.size;
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.closePath();
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.restore();
+    },
+    "triangle": (ctx, p={}) => {
+        // {x, y, size, color, angle}
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle || 0);
+        ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+            const angle = (i * 2 * Math.PI) / 3 - Math.PI / 2;
+            const x = Math.cos(angle) * p.size;
+            const y = Math.sin(angle) * p.size;
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.closePath();
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.restore();
+    },
+    "irregular": (ctx, p={}) => {
+        // {x, y, size, color, angle, points}
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle || 0);
+        const points = p.points || 6; // Default to 6 points if not specified
+        ctx.beginPath();
+        for (let i = 0; i < points; i++) {
+            const angle = (i * 2 * Math.PI) / points - Math.PI / 2;
+            // Add some randomness to the radius for irregularity
+            const radius = p.size * (0.7 + Math.random() * 0.6);
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.closePath();
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.restore();
     }
 }
