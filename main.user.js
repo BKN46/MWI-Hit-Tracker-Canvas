@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.1.5
+// @version        1.2.0
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1446,6 +1446,22 @@
 	    desc: isZH ? "原版伤害显示" : "Original Damage Display",
 	    value: false
 	  },
+	  hitAreaScale: {
+	    id: "hitAreaScale",
+	    desc: isZH ? "命中范围" : "Hit Area Scale",
+	    value: 1,
+	    min: 0.1,
+	    max: 3.0,
+	    step: 0.01
+	  },
+	  hitPositionMinGap: {
+	    id: "hitPositionMinGap",
+	    desc: isZH ? "命中最小间距" : "Minimum Gap Of Each Projectile Hit",
+	    value: 0,
+	    min: 0,
+	    max: 10,
+	    step: 1
+	  },
 	  damageTextLifespan: {
 	    id: "damageTextLifespan",
 	    desc: isZH ? "伤害文本持续时间" : "Damage Text Lifespan",
@@ -1945,6 +1961,72 @@
 	    ctx.fillStyle = p.color;
 	    ctx.fill();
 	    ctx.restore();
+	  },
+	  "pentagon": (ctx, p = {}) => {
+	    // {x, y, size, color, angle}
+	    ctx.save();
+	    ctx.translate(p.x, p.y);
+	    ctx.rotate(p.angle || 0);
+	    ctx.beginPath();
+	    for (let i = 0; i < 5; i++) {
+	      const angle = i * 2 * Math.PI / 5 - Math.PI / 2;
+	      const x = Math.cos(angle) * p.size;
+	      const y = Math.sin(angle) * p.size;
+	      if (i === 0) {
+	        ctx.moveTo(x, y);
+	      } else {
+	        ctx.lineTo(x, y);
+	      }
+	    }
+	    ctx.closePath();
+	    ctx.fillStyle = p.color;
+	    ctx.fill();
+	    ctx.restore();
+	  },
+	  "triangle": (ctx, p = {}) => {
+	    // {x, y, size, color, angle}
+	    ctx.save();
+	    ctx.translate(p.x, p.y);
+	    ctx.rotate(p.angle || 0);
+	    ctx.beginPath();
+	    for (let i = 0; i < 3; i++) {
+	      const angle = i * 2 * Math.PI / 3 - Math.PI / 2;
+	      const x = Math.cos(angle) * p.size;
+	      const y = Math.sin(angle) * p.size;
+	      if (i === 0) {
+	        ctx.moveTo(x, y);
+	      } else {
+	        ctx.lineTo(x, y);
+	      }
+	    }
+	    ctx.closePath();
+	    ctx.fillStyle = p.color;
+	    ctx.fill();
+	    ctx.restore();
+	  },
+	  "irregular": (ctx, p = {}) => {
+	    // {x, y, size, color, angle, points}
+	    ctx.save();
+	    ctx.translate(p.x, p.y);
+	    ctx.rotate(p.angle || 0);
+	    const points = p.points || 6; // Default to 6 points if not specified
+	    ctx.beginPath();
+	    for (let i = 0; i < points; i++) {
+	      const angle = i * 2 * Math.PI / points - Math.PI / 2;
+	      // Add some randomness to the radius for irregularity
+	      const radius = p.size * (0.7 + Math.random() * 0.6);
+	      const x = Math.cos(angle) * radius;
+	      const y = Math.sin(angle) * radius;
+	      if (i === 0) {
+	        ctx.moveTo(x, y);
+	      } else {
+	        ctx.lineTo(x, y);
+	      }
+	    }
+	    ctx.closePath();
+	    ctx.fillStyle = p.color;
+	    ctx.fill();
+	    ctx.restore();
 	  }
 	};
 
@@ -1957,23 +2039,25 @@
 	  "smoke": {
 	    angle: p => Math.random() * Math.PI * 2,
 	    alpha: p => 0.7,
-	    speed: p => (Math.random() * 0.2 + 0.1) * Math.sqrt(p.size),
+	    speed: p => (Math.random() * 0.05 + 0.02) * Math.sqrt(p.size),
 	    size: p => (Math.random() * 20 + 10) * p.size,
 	    life: p => 4000 * Math.sqrt(p.size),
-	    gravity: p => -0.2 * Math.sqrt(p.size),
+	    gravity: p => -0.04 * Math.sqrt(p.size),
 	    draw: (ctx, p) => {
 	      if (!p.initialized) {
 	        p.initialized = true;
-	        p.y -= 5 * p.size;
-	        p.sizeVariation = Math.random() * 0.2 + 0.9; // Size variation for billowing effect
-	        p.rotationSpeed = (Math.random() - 0.5) * 0.02; // Slow rotation
+	        p.y -= 3 * p.size;
+	        p.sizeVariation = Math.random() * 0.2 + 0.9;
+	        p.rotationSpeed = (Math.random() - 0.5) * 0.005;
 	        p.rotation = Math.random() * Math.PI * 2;
+	        p.verticalSpeed = 0;
 	      }
-	      p.speed *= 0.995; // Slower deceleration
+	      p.speed *= 0.999;
+	      p.verticalSpeed += p.gravity;
 	      p.x += Math.cos(p.angle) * p.speed;
-	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
-	      p.life -= 1;
-	      p.alpha = Math.max(0, p.alpha - 0.001);
+	      p.y += Math.sin(p.angle) * p.speed + p.verticalSpeed;
+	      p.life -= 1 / p.fpsFactor;
+	      p.alpha = Math.max(0, p.alpha - 0.0003 / p.fpsFactor);
 	      p.rotation += p.rotationSpeed;
 	      if (p.life > 0) {
 	        ctx.save();
@@ -2006,7 +2090,7 @@
 	      p.speed *= 0.99; // 慢慢减速
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
-	      p.life -= 3;
+	      p.life -= 3 / p.fpsFactor;
 	      if (p.life > 0) {
 	        const alpha = p.life / 800;
 	        ctx.beginPath();
@@ -2032,7 +2116,7 @@
 	        p.maxSize = p.size * (150 + Math.random() * 100) / 10;
 	      }
 	      p.size += (p.maxSize - p.size) * 0.1;
-	      p.life -= 10;
+	      p.life -= 10 / p.fpsFactor;
 	      if (p.life > 0) {
 	        const alpha = p.life / 400;
 	        ctx.beginPath();
@@ -2053,7 +2137,7 @@
 	      p.size = p.size * (1 - p.life / 400);
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
-	      p.life -= 3;
+	      p.life -= 3 / p.fpsFactor;
 	      if (p.life > 0) {
 	        ctx.beginPath();
 	        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -2070,9 +2154,9 @@
 	    speed: p => 0,
 	    gravity: p => -0.008 * Math.random() - 0.008,
 	    draw: (ctx, p) => {
-	      p.speed += p.gravity;
-	      p.y += p.speed;
-	      p.life -= 3;
+	      p.speed += p.gravity * p.fpsFactor;
+	      p.y += p.speed * p.fpsFactor;
+	      p.life -= 3 / p.fpsFactor;
 	      if (p.life > 0) {
 	        ctx.save();
 	        ctx.translate(p.x, p.y);
@@ -2100,7 +2184,7 @@
 	      p.speed *= 0.98;
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
-	      p.life -= 3;
+	      p.life -= 3 / p.fpsFactor;
 	      if (p.rotation !== undefined) {
 	        p.rotation += p.rotationSpeed;
 	      }
@@ -2136,7 +2220,7 @@
 	    draw: (ctx, p) => {
 	      if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
 	      if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
-	      p.life -= 2; // Even slower fade
+	      p.life -= 2 / p.fpsFactor; // Even slower fade
 
 	      if (p.life > 0) {
 	        const alpha = p.life / 300 * p.size;
@@ -2194,7 +2278,7 @@
 	      p.speed *= 0.998; // Very smooth deceleration
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
-	      p.life -= 3;
+	      p.life -= 3 / p.fpsFactor;
 	      if (p.life > 0) {
 	        const alpha = p.life / 400;
 	        ctx.save();
@@ -2250,7 +2334,7 @@
 	        } // Slow, faint outer ripple
 	        ];
 	      }
-	      p.life -= 1;
+	      p.life -= 1 / p.fpsFactor;
 
 	      // Update each ripple
 	      p.ripples.forEach((ripple, index) => {
@@ -2318,7 +2402,7 @@
 	          });
 	        }
 	      }
-	      p.life -= 2;
+	      p.life -= 2 / p.fpsFactor;
 
 	      // Update and draw particles
 	      p.particles.forEach(particle => {
@@ -2355,7 +2439,7 @@
 	      p.speed *= 0.97; // 慢慢减速
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
-	      p.life -= 3;
+	      p.life -= 3 / p.fpsFactor;
 	      if (p.life > 0) {
 	        const alpha = Math.max(0, Math.min(1, p.life / 1200));
 	        ctx.save();
@@ -2406,7 +2490,7 @@
 	          });
 	        }
 	      }
-	      p.life -= 2;
+	      p.life -= 2 / p.fpsFactor;
 	      p.time += 0.1;
 	      const alpha = p.life / 1200;
 	      if (p.life > 0) {
@@ -2528,7 +2612,7 @@
 	          });
 	        }
 	      }
-	      p.life -= 1;
+	      p.life -= 1 / p.fpsFactor;
 	      const alpha = Math.pow(p.life / p.maxLife, 0.7);
 	      if (p.life > 0) {
 	        // Draw main poison cloud
@@ -2567,7 +2651,7 @@
 	      p.speed *= 0.96;
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed;
-	      p.life -= 1;
+	      p.life -= 1 / p.fpsFactor;
 	      const lifeRatio = p.life / p.maxLife;
 	      const alpha = Math.pow(lifeRatio, 0.2);
 	      if (p.life > 0) {
@@ -2647,7 +2731,7 @@
 	        p.rotationSpeed = (Math.random() - 0.5) * 0.05;
 	        p.oringinalSize = p.size;
 	      }
-	      p.life -= 1;
+	      p.life -= 1 / p.fpsFactor;
 	      p.speed *= 0.98;
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
@@ -2782,15 +2866,15 @@
 	          });
 	        }
 	      }
-	      p.life -= 3;
+	      p.life -= 3 / p.fpsFactor;
 	      if (p.life > 0) {
 	        const alpha = p.life;
 	        for (let particle of p.particles) {
 	          const heightRatio = particle.height / p.maxHeight;
 	          const currentSpeed = particle.baseSpeed * Math.pow(1 - heightRatio, 3);
-	          particle.angle += p.frequency * currentSpeed * p.timeSpeed;
+	          particle.angle += p.frequency * currentSpeed * p.timeSpeed * p.fpsFactor;
 	          particle.radius += (Math.random() - 0.5) * 0.5;
-	          particle.height += 1.5 * p.timeSpeed;
+	          particle.height += 1.5 * p.timeSpeed * p.fpsFactor;
 
 	          // Add leaf-like movement
 	          particle.rotation += particle.rotationSpeed;
@@ -2862,6 +2946,189 @@
 	        shapes.rectangle(ctx, p);
 	      }
 	    }
+	  },
+	  "shatter": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => (1 * Math.random() + 5) * p.size,
+	    life: p => 500 * p.size,
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.particles = [];
+	        // Create particles in a circular pattern
+	        const particleCount = Math.max(2, Math.min(0.1, Math.floor(p.size * 1))); // Scale particle count with size
+
+	        // Define the main direction and spread
+	        const mainAngle = Math.random() * Math.PI * 2; // Random main direction
+	        const spreadAngle = Math.PI / 3; // 60 degree spread
+
+	        for (let i = 0; i < particleCount; i++) {
+	          // Calculate angle within the spread range
+	          const angleProgress = i / (particleCount - 1);
+	          const angleVariation = (Math.random() - 0.5) * 0.3; // Small random variation
+	          const finalAngle = mainAngle - spreadAngle / 2 + spreadAngle * angleProgress + angleVariation;
+
+	          // Create size variation
+	          const sizeVariation = Math.random() * 0.8 + 0.6; // More consistent size
+	          const baseSize = (Math.random() * 0.6 + 5) * p.size;
+
+	          // Generate initial radius variations for each point
+	          const points = Math.floor(Math.random() * 3) + 3;
+	          const radiusVariations = Array.from({
+	            length: points
+	          }, () => 0.7 + Math.random() * 0.6);
+	          p.particles.push({
+	            x: p.x,
+	            y: p.y,
+	            angle: finalAngle,
+	            speed: (Math.random() * 2 + 1) * Math.sqrt(p.size) * p.fpsFactor,
+	            // Reduced initial speed
+	            size: baseSize * sizeVariation,
+	            initialSize: baseSize * sizeVariation,
+	            life: 500 * p.size,
+	            maxLife: 500 * p.size,
+	            gravity: 0.05,
+	            points: points,
+	            shapeAngle: Math.floor(Math.random() * 6),
+	            rotationSpeed: (Math.random() - 0.5) * 0.05,
+	            // Add rotation speed
+	            radiusVariations: radiusVariations,
+	            verticalSpeed: 0 // Add vertical speed for better gravity effect
+	          });
+	        }
+	      }
+	      p.life -= 10 / p.fpsFactor;
+
+	      // Update and draw particles
+	      p.particles.forEach(particle => {
+	        // Update vertical speed with gravity
+	        particle.verticalSpeed += particle.gravity;
+
+	        // Update position with both horizontal and vertical movement
+	        particle.speed *= 0.98; // Slower deceleration
+	        particle.x += Math.cos(particle.angle) * particle.speed;
+	        particle.y += Math.sin(particle.angle) * particle.speed + particle.verticalSpeed;
+
+	        // Update rotation
+	        particle.shapeAngle += particle.rotationSpeed;
+	        particle.life -= 10 / p.fpsFactor;
+	        const lifeRatio = particle.life / particle.maxLife;
+	        const opacity = Math.pow(lifeRatio, 0.5);
+	        particle.size = particle.initialSize * Math.pow(lifeRatio, 0.5);
+	        if (particle.life > 0) {
+	          ctx.save();
+	          ctx.translate(particle.x, particle.y);
+
+	          // Draw irregular shape with stored radius variations
+	          ctx.rotate(particle.shapeAngle);
+	          ctx.beginPath();
+	          for (let i = 0; i < particle.points; i++) {
+	            const angle = i * 2 * Math.PI / particle.points - Math.PI / 2;
+	            const radius = particle.size * particle.radiusVariations[i];
+	            const x = Math.cos(angle) * radius;
+	            const y = Math.sin(angle) * radius;
+	            if (i === 0) {
+	              ctx.moveTo(x, y);
+	            } else {
+	              ctx.lineTo(x, y);
+	            }
+	          }
+	          ctx.closePath();
+	          ctx.fillStyle = p.color.replace('0.2', opacity.toString());
+	          ctx.fill();
+	          ctx.restore();
+	        }
+	      });
+	    }
+	  },
+	  "crescentSlash": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => 10 * p.size,
+	    // Reduced base size
+	    life: p => 1200 * p.size,
+	    speed: p => (Math.random() * 10 + 4) * Math.sqrt(p.size) * 0.01,
+	    angle: p => Math.random() * Math.PI * 2,
+	    curveAmount: p => 5.3 * p.size * 2,
+	    distance: p => 60 * p.size,
+	    alpha: p => 1,
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.trail = [];
+	        p.fadeStartTime = 0;
+	        p.isSlashing = true;
+	        p.progress = 0;
+	        p.speed = (Math.random() * 10 + 4) * Math.sqrt(p.size) * 0.01 * p.fpsFactor;
+	        p.angle = Math.random() * Math.PI * 2;
+	        p.curveAmount = 5.3 * p.size * 2;
+	        p.distance = 60 * p.size;
+	        p.totalPoints = Math.max(30, Math.min(100, Math.floor(p.distance / 2)));
+	      }
+	      p.life -= 3 / p.fpsFactor;
+	      const alpha = Math.pow(Math.min(1, p.life / p.maxLife), 0.5);
+	      if (p.life > 0) {
+	        if (p.isSlashing) {
+	          p.progress = Math.min(1, p.progress + p.speed);
+	          p.trail = [];
+	          const currentPoints = Math.floor(p.totalPoints * p.progress);
+	          for (let i = 0; i < currentPoints; i++) {
+	            const progress = i / p.totalPoints - 0.5;
+	            const distance = progress * p.distance;
+
+	            // Calculate base position
+	            let x = Math.cos(p.angle) * distance;
+	            let y = Math.sin(p.angle) * distance;
+
+	            // Add crescent curve
+	            const curveOffset = Math.sin((progress + 0.5) * Math.PI) * p.curveAmount;
+	            x += Math.cos(p.angle + Math.PI / 2) * curveOffset;
+	            y += Math.sin(p.angle + Math.PI / 2) * curveOffset;
+	            let size = p.size * 1.2; // Reduced multiplier
+	            if (progress < -0.2) {
+	              size = p.size * (0.3 + (progress + 0.5) * 3); // Reduced size scaling
+	            } else if (progress > 0.2) {
+	              size = p.size * (1.2 - (progress - 0.2) * 3); // Reduced size scaling
+	            }
+	            p.trail.push({
+	              x: x,
+	              y: y,
+	              size: size,
+	              alpha: 1,
+	              age: 0
+	            });
+	          }
+	          if (p.progress >= 1) {
+	            p.isSlashing = false;
+	            p.fadeStartTime = Date.now();
+	          }
+	        }
+	        ctx.save();
+	        ctx.translate(p.x, p.y);
+	        for (let i = 0; i < p.trail.length; i++) {
+	          const point = p.trail[i];
+	          let pointAlpha;
+	          if (p.isSlashing) {
+	            pointAlpha = Math.exp(-point.age / 150) * alpha;
+	            point.age += 0.5;
+	          } else {
+	            const timeSinceFade = Date.now() - p.fadeStartTime;
+	            const fadeProgress = timeSinceFade / 1000;
+	            pointAlpha = Math.exp(-fadeProgress * 2) * alpha;
+	          }
+	          ctx.beginPath();
+	          ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+	          ctx.fillStyle = changeColorAlpha(p.color, pointAlpha);
+	          ctx.fill();
+	          if (p.isSlashing && point.age >= 200 || !p.isSlashing && Date.now() - p.fadeStartTime >= 1000) {
+	            p.trail.splice(i, 1);
+	            i--;
+	          }
+	        }
+	        ctx.restore();
+	      }
+	    }
 	  }
 	};
 
@@ -2897,7 +3164,7 @@
 	      ctx.fillStyle = gradient;
 	    },
 	    trail: (ctx, p, i) => {
-	      const alpha = i / p.totalLength;
+	      const alpha = Math.min(i / p.totalLength, 1);
 	      ctx.beginPath();
 	      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
 	      ctx.fillStyle = changeColorAlpha(p.color, alpha);
@@ -2928,7 +3195,7 @@
 	      ctx.restore();
 	    },
 	    trail: (ctx, p, i) => {
-	      const alpha = i / p.totalLength;
+	      const alpha = Math.min(i / p.totalLength, 1);
 	      p.x = p.x + (Math.random() - 0.5) * 5;
 	      p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
 	      ctx.beginPath();
@@ -2947,7 +3214,7 @@
 	    trailLength: 30,
 	    shake: true,
 	    onHit: {
-	      "slash": size => Math.min(Math.ceil(size * 4), 8),
+	      "crescentSlash": size => Math.min(Math.ceil(size * 4), 8),
 	      "slashParticle": size => Math.min(Math.ceil(size * 8), 20)
 	    }
 	    // draw: (ctx, p) => {
@@ -2975,7 +3242,7 @@
 	      ctx.fill();
 	    },
 	    trail: (ctx, p, i) => {
-	      const alpha = i / p.totalLength;
+	      const alpha = Math.min(i / p.totalLength, 1);
 	      p.x = p.x + (Math.random() - 0.5) * 5;
 	      p.y = p.y - (Math.random() - 0.5) * 1;
 	      ctx.beginPath();
@@ -3098,7 +3365,7 @@
 	    trailLength: 3,
 	    shake: true,
 	    onHit: {
-	      "pixelSmoke": size => Math.min(Math.ceil(size * 80), 50)
+	      "crescentSlash": size => Math.min(Math.ceil(size * 3), 6)
 	    },
 	    draw: (ctx, p) => {
 	      ctx.beginPath();
@@ -3155,7 +3422,7 @@
 	      ctx.fill();
 	    },
 	    trail: (ctx, p, i) => {
-	      const alpha = i / p.totalLength;
+	      const alpha = Math.min(i / p.totalLength, 1);
 	      const trailSize = p.size * alpha;
 
 	      // Create glowing trail gradient
@@ -3217,7 +3484,7 @@
 	      ctx.fill();
 	    },
 	    trail: (ctx, p, i) => {
-	      const alpha = i / p.totalLength;
+	      const alpha = Math.min(i / p.totalLength, 1);
 	      const trailSize = p.size * (1 + Math.sin(Date.now() * 0.01) * 0.2);
 
 	      // Create glowing trail gradient
@@ -3266,7 +3533,7 @@
 	      ctx.fill();
 	    },
 	    trail: (ctx, p, i) => {
-	      const alpha = i / p.totalLength;
+	      const alpha = Math.min(i / p.totalLength, 1);
 	      p.x = p.x + (Math.random() - 0.5) * 5;
 	      p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
 	      ctx.beginPath();
@@ -3340,16 +3607,93 @@
 	    }
 	  },
 	  'fireTornado': {
-	    speedFactor: 2,
-	    trailLength: 3,
+	    speedFactor: 1,
+	    trailLength: 40,
 	    shake: true,
 	    onHit: {
+	      "smoke": size => Math.min(Math.ceil(size * 10), 10),
 	      "tornado": size => Math.min(Math.ceil(size * 5), 8)
 	    },
 	    draw: (ctx, p) => {
+	      // Draw main projectile
 	      ctx.beginPath();
 	      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
 	      ctx.fillStyle = p.color;
+	      ctx.fill();
+
+	      // Create inner glow gradient
+	      const innerGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 1.5);
+	      innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+	      innerGlow.addColorStop(0.5, p.color);
+	      innerGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
+	      ctx.fillStyle = innerGlow;
+	      ctx.fill();
+	    },
+	    glow: (ctx, p) => {
+	      // Create outer glow gradient
+	      const outerGlow = ctx.createRadialGradient(p.x, p.y, p.size * 1.5, p.x, p.y, p.size * 3);
+	      outerGlow.addColorStop(0, p.color);
+	      // outerGlow.addColorStop(0.5, 'rgba(250, 178, 24, 0.2)');
+	      outerGlow.addColorStop(1, 'rgba(255, 50, 0, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+	      ctx.fillStyle = outerGlow;
+	      ctx.fill();
+
+	      // Add pulsing effect
+	      const pulseSize = p.size * (3 + Math.sin(Date.now() * 0.01) * 0.5);
+	      const pulseGlow = ctx.createRadialGradient(p.x, p.y, p.size * 2, p.x, p.y, pulseSize);
+	      pulseGlow.addColorStop(0, changeColorAlpha(p.color, 0.1));
+	      pulseGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+	      ctx.fillStyle = pulseGlow;
+	      ctx.fill();
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = Math.min(i / p.totalLength, 1);
+	      const trailSize = p.size * alpha;
+
+	      // Create glowing trail gradient
+	      // const trailGlow = ctx.createRadialGradient(
+	      //     p.x, p.y, 0,
+	      //     p.x, p.y, trailSize * 2
+	      // );
+	      // trailGlow.addColorStop(0, changeColorAlpha(p.color, alpha));
+	      // trailGlow.addColorStop(1, changeColorAlpha(p.color, 0));
+
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+	      ctx.fillStyle = changeColorAlpha(p.color, alpha);
+	      ctx.fill();
+	    }
+	  },
+	  'blunt': {
+	    speedFactor: 3,
+	    gravity: -0.1,
+	    trailLength: 20,
+	    shake: true,
+	    onHit: {
+	      "shatter": size => Math.min(Math.ceil(size * 5), 10),
+	      "shockwave": size => Math.min(Math.ceil(size * 2), 6)
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = Math.min(i / p.totalLength, 1);
+	      const trailSize = p.size * alpha;
+
+	      // Create glowing trail gradient
+	      // const trailGlow = ctx.createRadialGradient(
+	      //     p.x, p.y, 0,
+	      //     p.x, p.y, trailSize * 2
+	      // );
+	      // trailGlow.addColorStop(0, changeColorAlpha(p.color, alpha));
+	      // trailGlow.addColorStop(1, changeColorAlpha(p.color, 0));
+
+	      ctx.beginPath();
+	      ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
+	      ctx.fillStyle = changeColorAlpha(p.color, alpha);
 	      ctx.fill();
 	    }
 	  }
@@ -3384,9 +3728,11 @@
 	  '/abilities/poke': "thrust",
 	  '/abilities/puncture': "thrust",
 	  '/abilities/scratch': "slash",
-	  '/abilities/smack': "slash",
-	  '/abilities/sweep': "slash",
-	  '/abilities/stunning_blow': "slash"
+	  '/abilities/smack': "blunt",
+	  '/abilities/sweep': "blunt",
+	  '/abilities/stunning_blow': "blunt",
+	  '/abilities/fracturing_impact': "blunt",
+	  '/abilities/shield_bash': "blunt"
 	};
 
 	let activeEffects = [];
@@ -3787,9 +4133,9 @@
 	    this.timeInAir = 80 / this.initialSpeed;
 
 	    // FPS因子，确保在不同FPS下效果一致
-	    const fpsFactor = getFpsFactor();
-	    this.gravity *= Math.pow(fpsFactor, 2);
-	    this.timeInAir /= fpsFactor;
+	    this.fpsFactor = getFpsFactor();
+	    this.gravity *= Math.pow(this.fpsFactor, 2);
+	    this.timeInAir /= this.fpsFactor;
 
 	    // 计算初始速度，修正公式确保能够到达目标
 	    this.velocity = {
@@ -3819,7 +4165,7 @@
 	    this.independentTrail = this.effect.independentTrail || false; // 是否独立拖尾
 	    this.maxTrailLength = Math.floor((this.effect.trailLength || 35) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
 	    this.maxTrailLength *= settingsMap.projectileTrailLength.value || 1; // 拖尾缩放因子
-	    this.trailGap = (settingsMap.projectileTrailGap.value || 1) / fpsFactor;
+	    this.trailGap = (settingsMap.projectileTrailGap.value || 1) / this.fpsFactor;
 	  }
 	  update() {
 	    this.life += 1;
@@ -3848,7 +4194,7 @@
 	      this.trail = [];
 	      for (let i = 0; i < this.maxTrailLength; i++) {
 	        const trailTime = this.life - (this.maxTrailLength - i - 1) * this.trailGap;
-	        if (trailTime <= 0) break;
+	        if (trailTime <= 0) continue;
 	        const trailPos = this.trajectory(trailTime);
 	        this.trail.push({
 	          x: trailPos.x,
@@ -3857,7 +4203,7 @@
 	          vY: this.velocity.y,
 	          color: this.color,
 	          size: this.size,
-	          totalLength: this.maxTrailLength
+	          totalLength: Math.min(this.maxTrailLength, this.life)
 	        });
 	      }
 	    }
@@ -3954,6 +4300,7 @@
 	        life: effectLife,
 	        maxLife: effectLife,
 	        color: effect.color ? effect.color(projectile) : projectile.color,
+	        fpsFactor: fpsFactor,
 	        draw: effect.draw ? effect.draw : (ctx, p) => {}
 	      });
 	    }
@@ -3988,6 +4335,7 @@
 	      for (const e of effect.effects) {
 	        e.speed *= fpsFactor;
 	        e.life /= fpsFactor;
+	        e.fpsFactor = fpsFactor;
 	      }
 	      effect.lifespan /= fpsFactor;
 	      effect.isFpsOptimized = true;
@@ -4037,21 +4385,40 @@
 	    combatUnitContainer.style.visibility = "hidden";
 	  }
 	  const padding = 30;
+	  const randomRangeRatio = settingsMap.hitAreaScale.value || 1;
 	  const randomRange = {
-	    x: Math.floor((Math.random() - 0.5) * (combatUnitContainer.offsetWidth - 2 * padding)),
-	    y: Math.floor((Math.random() - 0.1) * (combatUnitContainer.offsetHeight - padding))
+	    x: () => Math.floor((Math.random() - 0.5) * (combatUnitContainer.offsetWidth - 2 * padding)) * randomRangeRatio,
+	    y: () => Math.floor((Math.random() - 0.1) * (combatUnitContainer.offsetHeight - padding)) * randomRangeRatio
 	  };
 	  const projectileLimit = settingsMap.projectileLimit.value || 30;
 	  const start = getElementCenter(startElement);
 	  const end = getElementCenter(endElement);
-	  end.x = Math.floor(end.x + randomRange.x);
-	  end.y = Math.floor(end.y + randomRange.y);
+	  let endX = Math.floor(end.x + randomRange.x());
+	  let endY = Math.floor(end.y + randomRange.y());
+	  const minimalGap = (settingsMap.hitPositionMinGap.value || 0) * randomRangeRatio;
+	  if (minimalGap > 0) {
+	    let attempts = 100;
+	    while (attempts > 0 && projectiles.some(p => {
+	      const distance = Math.hypot(p.otherInfo.end.x - end.x, p.otherInfo.end.y - end.y);
+	      return distance < minimalGap;
+	    })) {
+	      endX = Math.floor(end.x + randomRange.x());
+	      endY = Math.floor(end.y + randomRange.y());
+	      attempts -= 1;
+	    }
+	    if (attempts <= 0) {
+	      console.warn("[MWI-Hit-Tracker-Canvas]Hit position is too crowded, hit gap may not work as expected.");
+	    }
+	  }
 	  const size = Math.min(Math.max(Math.pow(damage + 200, 0.7) / 20, 4), 16);
 	  projectileType = abilityEffectsMap[projectileType] || projectileType;
 	  const otherInfo = {
 	    type: projectileType,
 	    start: start,
-	    end: end,
+	    end: {
+	      x: endX,
+	      y: endY
+	    },
 	    damage: damage,
 	    color: color,
 	    isCrit: isCrit,
@@ -4066,7 +4433,7 @@
 	    if (otherInfo.isKill && settingsMap.monsterDeadAnimation.value) {
 	      deathEffect[settingsMap.monsterDeadAnimationStyle.value](otherInfo.endElement);
 	    }
-	    const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
+	    const projectile = new Projectile(start.x, start.y, endX, endY, color, initialSpeed, size, otherInfo);
 	    projectiles.push(projectile);
 	  } else {
 	    projectiles.shift();

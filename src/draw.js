@@ -141,9 +141,9 @@ class Projectile {
         this.timeInAir = 80 / this.initialSpeed;
 
         // FPS因子，确保在不同FPS下效果一致
-        const fpsFactor = getFpsFactor(); 
-        this.gravity *= Math.pow(fpsFactor, 2);
-        this.timeInAir /= fpsFactor;
+        this.fpsFactor = getFpsFactor(); 
+        this.gravity *= Math.pow(this.fpsFactor, 2);
+        this.timeInAir /= this.fpsFactor;
 
         // 计算初始速度，修正公式确保能够到达目标
         this.velocity = {
@@ -172,7 +172,7 @@ class Projectile {
         this.independentTrail = this.effect.independentTrail || false; // 是否独立拖尾
         this.maxTrailLength = Math.floor((this.effect.trailLength || 35) * Math.sqrt(this.sizeScale)); // 拖尾长度随大小增加
         this.maxTrailLength *= settingsMap.projectileTrailLength.value || 1; // 拖尾缩放因子
-        this.trailGap = (settingsMap.projectileTrailGap.value || 1) / fpsFactor;
+        this.trailGap = (settingsMap.projectileTrailGap.value || 1) / this.fpsFactor;
     }
 
     update() {
@@ -202,7 +202,7 @@ class Projectile {
             this.trail = [];
             for (let i = 0; i < this.maxTrailLength; i++) {
                 const trailTime = this.life - (this.maxTrailLength - i - 1) * this.trailGap;
-                if (trailTime <= 0) break;
+                if (trailTime <= 0) continue;
                 const trailPos = this.trajectory(trailTime);
                 this.trail.push({
                     x: trailPos.x,
@@ -211,7 +211,7 @@ class Projectile {
                     vY: this.velocity.y,
                     color: this.color,
                     size: this.size,
-                    totalLength: this.maxTrailLength,
+                    totalLength: Math.min(this.maxTrailLength, this.life),
                 });
             }
         }
@@ -412,16 +412,35 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         combatUnitContainer.style.visibility = "hidden";
     }
     const padding = 30;
+    const randomRangeRatio = settingsMap.hitAreaScale.value || 1;
     const randomRange = {
-        x: Math.floor((Math.random() - 0.5) * (combatUnitContainer.offsetWidth - 2 * padding)),
-        y: Math.floor((Math.random() - 0.1) * (combatUnitContainer.offsetHeight - padding)),
+        x: () => Math.floor((Math.random() - 0.5) * (combatUnitContainer.offsetWidth - 2 * padding)) * randomRangeRatio,
+        y: () => Math.floor((Math.random() - 0.1) * (combatUnitContainer.offsetHeight - padding)) * randomRangeRatio,
     }
 
     const projectileLimit = settingsMap.projectileLimit.value || 30;
     const start = getElementCenter(startElement);
     const end = getElementCenter(endElement);
-    end.x = Math.floor(end.x + randomRange.x);
-    end.y = Math.floor(end.y + randomRange.y);
+    let endX = Math.floor(end.x + randomRange.x());
+    let endY = Math.floor(end.y + randomRange.y());
+
+    const minimalGap = (settingsMap.hitPositionMinGap.value || 0) * randomRangeRatio;
+    if (minimalGap > 0) {
+        let attempts = 100;
+        while (
+            attempts > 0 && projectiles.some((p) => {
+                const distance = Math.hypot(p.otherInfo.end.x - end.x, p.otherInfo.end.y - end.y);
+                return distance < minimalGap;
+            })
+        ) {
+            endX = Math.floor(end.x + randomRange.x());
+            endY = Math.floor(end.y + randomRange.y());
+            attempts-=1;
+        }
+        if (attempts <= 0) {
+            console.warn("[MWI-Hit-Tracker-Canvas]Hit position is too crowded, hit gap may not work as expected.");
+        }
+    }
 
     const size = Math.min(Math.max(Math.pow(damage+200,0.7)/20, 4), 16)
 
@@ -430,7 +449,7 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
     const otherInfo = {
         type: projectileType,
         start: start,
-        end: end,
+        end: {x: endX, y: endY},
         damage: damage,
         color: color,
         isCrit: isCrit,
@@ -445,7 +464,7 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         if (otherInfo.isKill && settingsMap.monsterDeadAnimation.value) {
             deathEffect[settingsMap.monsterDeadAnimationStyle.value](otherInfo.endElement);
         }
-        const projectile = new Projectile(start.x, start.y, end.x, end.y, color, initialSpeed, size, otherInfo);
+        const projectile = new Projectile(start.x, start.y, endX, endY, color, initialSpeed, size, otherInfo);
         projectiles.push(projectile);
     } else {
         projectiles.shift();

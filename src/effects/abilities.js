@@ -28,7 +28,9 @@ export const abilityEffectsMap = {
     '/abilities/poke': "thrust",
     '/abilities/puncture': "thrust",
     '/abilities/scratch': "slash",
-    '/abilities/smack': "slash",
-    '/abilities/sweep': "slash",
-    '/abilities/stunning_blow': "slash",
+    '/abilities/smack': "blunt",
+    '/abilities/sweep': "blunt",
+    '/abilities/stunning_blow': "blunt",
+    '/abilities/fracturing_impact': "blunt",
+    '/abilities/shield_bash': "blunt",
 }

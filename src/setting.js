@@ -95,6 +95,22 @@ export let settingsMap = {
         desc: isZH ? "原版伤害显示":"Original Damage Display",
         value: false,
     },
+    hitAreaScale: {
+        id: "hitAreaScale",
+        desc: isZH ? "命中范围":"Hit Area Scale",
+        value: 1,
+        min: 0.1,
+        max: 3.0,
+        step: 0.01,
+    },
+    hitPositionMinGap: {
+        id: "hitPositionMinGap",
+        desc: isZH ? "命中最小间距":"Minimum Gap Of Each Projectile Hit",
+        value: 0,
+        min: 0,
+        max: 10,
+        step: 1,
+    },
     damageTextLifespan: {
         id: "damageTextLifespan",
         desc: isZH ? "伤害文本持续时间":"Damage Text Lifespan",

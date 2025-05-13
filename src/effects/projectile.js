@@ -36,7 +36,7 @@ export const projectileEffectsMap = {
             ctx.fillStyle = gradient;
         },
         trail: (ctx, p, i) => {
-            const alpha = i / p.totalLength;
+            const alpha = Math.min(i / p.totalLength, 1);
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
             ctx.fillStyle = changeColorAlpha(p.color, alpha);
@@ -75,7 +75,7 @@ export const projectileEffectsMap = {
             ctx.restore();
         },
         trail: (ctx, p, i) => {
-            const alpha = i / p.totalLength;
+            const alpha = Math.min(i / p.totalLength, 1);
             p.x = p.x + (Math.random() - 0.5) * 5;
             p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
             ctx.beginPath();
@@ -94,7 +94,7 @@ export const projectileEffectsMap = {
         trailLength: 30,
         shake: true,
         onHit: {
-            "slash": (size) => Math.min(Math.ceil(size * 4), 8),
+            "crescentSlash": (size) => Math.min(Math.ceil(size * 4), 8),
             "slashParticle": (size) => Math.min(Math.ceil(size * 8), 20),
         },
         // draw: (ctx, p) => {
@@ -122,7 +122,7 @@ export const projectileEffectsMap = {
             ctx.fill();
         },
         trail: (ctx, p, i) => {
-            const alpha = i / p.totalLength;
+            const alpha = Math.min(i / p.totalLength, 1);
             p.x = p.x + (Math.random() - 0.5) * 5;
             p.y = p.y - (Math.random() - 0.5) * 1;
             ctx.beginPath();
@@ -319,7 +319,7 @@ export const projectileEffectsMap = {
             ctx.fill();
         },
         trail: (ctx, p, i) => {
-            const alpha = i / p.totalLength;
+            const alpha = Math.min(i / p.totalLength, 1);
             const trailSize = p.size * alpha;
 
             // Create glowing trail gradient
@@ -388,7 +388,7 @@ export const projectileEffectsMap = {
 
         },
         trail: (ctx, p, i) => {
-            const alpha = i / p.totalLength;
+            const alpha = Math.min(i / p.totalLength, 1);
             const trailSize = p.size * (1 + Math.sin(Date.now() * 0.01) * 0.2);
             
             // Create glowing trail gradient
@@ -449,7 +449,7 @@ export const projectileEffectsMap = {
             ctx.fill();
         },
         trail: (ctx, p, i) => {
-            const alpha = i / p.totalLength;
+            const alpha = Math.min(i / p.totalLength, 1);
             p.x = p.x + (Math.random() - 0.5) * 5;
             p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
             ctx.beginPath();
@@ -583,7 +583,7 @@ export const projectileEffectsMap = {
             ctx.fill();
         },
         trail: (ctx, p, i) => {
-            const alpha = i / p.totalLength;
+            const alpha = Math.min(i / p.totalLength, 1);
             const trailSize = p.size * alpha;
 
             // Create glowing trail gradient
@@ -601,7 +601,7 @@ export const projectileEffectsMap = {
         }
     },
     'blunt': {
-        speedFactor: 2,
+        speedFactor: 3,
         gravity: -0.1,
         trailLength: 20,
         
@@ -612,7 +612,7 @@ export const projectileEffectsMap = {
         },
         
         trail: (ctx, p, i) => {
-            const alpha = i / p.totalLength;
+            const alpha = Math.min(i / p.totalLength, 1);
             const trailSize = p.size * alpha;
 
             // Create glowing trail gradient

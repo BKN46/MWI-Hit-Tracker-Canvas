@@ -28,8 +28,8 @@ export const onHitEffectsMap = {
             p.verticalSpeed += p.gravity;
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed + p.verticalSpeed;
-            p.life -= 1;
-            p.alpha = Math.max(0, p.alpha - 0.0003);
+            p.life -= 1 / p.fpsFactor;
+            p.alpha = Math.max(0, p.alpha - 0.0003 / p.fpsFactor);
             p.rotation += p.rotationSpeed;
             
             if (p.life > 0) {
@@ -64,7 +64,7 @@ export const onHitEffectsMap = {
             p.speed *= 0.99; // 慢慢减速
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed + p.gravity;
-            p.life -= 3;
+            p.life -= 3 / p.fpsFactor;
             
             if (p.life > 0) {
                 const alpha = p.life / 800;
@@ -91,7 +91,7 @@ export const onHitEffectsMap = {
                 p.maxSize = p.size * (150 + Math.random() * 100) / 10;
             }
             p.size += (p.maxSize - p.size) * 0.1;
-            p.life -= 10;
+            p.life -= 10 / p.fpsFactor;
 
             if (p.life > 0) {
                 const alpha = p.life / 400;
@@ -113,7 +113,7 @@ export const onHitEffectsMap = {
             p.size = p.size * (1 - p.life / 400);
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed + p.gravity;
-            p.life -= 3;
+            p.life -= 3 / p.fpsFactor;
 
             if (p.life > 0) {
                 ctx.beginPath();
@@ -131,9 +131,9 @@ export const onHitEffectsMap = {
         speed: (p) => 0,
         gravity: (p) => -0.008 * Math.random() - 0.008,
         draw: (ctx, p) => {
-            p.speed += p.gravity;
-            p.y += p.speed;
-            p.life -= 3;
+            p.speed += p.gravity * p.fpsFactor;
+            p.y += p.speed * p.fpsFactor;
+            p.life -= 3 / p.fpsFactor;
 
             if (p.life > 0) {
                 ctx.save();
@@ -165,7 +165,7 @@ export const onHitEffectsMap = {
             p.speed *= 0.98;
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed + p.gravity;
-            p.life -= 3;
+            p.life -= 3 / p.fpsFactor;
 
             if (p.rotation !== undefined) {
                 p.rotation += p.rotationSpeed;
@@ -212,7 +212,7 @@ export const onHitEffectsMap = {
             draw: (ctx, p) => {
                 if (!p.length) p.length = p.size * (120 + Math.random() * 80); // More consistent length
                 if (!p.maxWidth) p.maxWidth = 1.5 * Math.sqrt(p.size); // Thinner slash
-                p.life -= 2; // Even slower fade
+                p.life -= 2 / p.fpsFactor; // Even slower fade
                 
                 if (p.life > 0) {
                     const alpha = p.life / 300 * p.size;
@@ -290,7 +290,7 @@ export const onHitEffectsMap = {
             p.speed *= 0.998; // Very smooth deceleration
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed + p.gravity;
-            p.life -= 3;
+            p.life -= 3 / p.fpsFactor;
 
             if (p.life > 0) {
                 const alpha = p.life / 400;
@@ -345,7 +345,7 @@ export const onHitEffectsMap = {
                 ];
             }
             
-            p.life -= 1;
+            p.life -= 1 / p.fpsFactor;
             
             // Update each ripple
             p.ripples.forEach((ripple, index) => {
@@ -413,7 +413,7 @@ export const onHitEffectsMap = {
                 }
             }
 
-            p.life -= 2;
+            p.life -= 2 / p.fpsFactor;
             
             // Update and draw particles
             p.particles.forEach(particle => {
@@ -452,7 +452,7 @@ export const onHitEffectsMap = {
             p.speed *= 0.97; // 慢慢减速
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed + p.gravity;
-            p.life -= 3;
+            p.life -= 3 / p.fpsFactor;
 
             if (p.life > 0) {
                 const alpha = Math.max(0, Math.min(1, (p.life / 1200)));
@@ -511,7 +511,7 @@ export const onHitEffectsMap = {
                 }
             }
             
-            p.life -= 2;
+            p.life -= 2 / p.fpsFactor;
             p.time += 0.1;
             const alpha = p.life / 1200;
             
@@ -601,7 +601,7 @@ export const onHitEffectsMap = {
                 }
             }
             
-            p.life -= 1;
+            p.life -= 1 / p.fpsFactor;
             const alpha = Math.pow(p.life / p.maxLife, 0.7);
             
             if (p.life > 0) {
@@ -642,7 +642,7 @@ export const onHitEffectsMap = {
             p.speed *= 0.96;
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed;
-            p.life -= 1;
+            p.life -= 1 / p.fpsFactor;
             
             const lifeRatio = p.life / p.maxLife;
             const alpha = Math.pow(lifeRatio, 0.2);
@@ -726,7 +726,7 @@ export const onHitEffectsMap = {
                 p.oringinalSize = p.size;
             }
 
-            p.life -= 1;
+            p.life -= 1 / p.fpsFactor;
 
             p.speed *= 0.98;
             p.x += Math.cos(p.angle) * p.speed;
@@ -779,7 +779,7 @@ export const onHitEffectsMap = {
                     
                     // Draw particle with glow effects
                     // Base layer with reduced opacity
-                ctx.fillStyle = changeColorAlpha(p.color, opacity);
+                    ctx.fillStyle = changeColorAlpha(p.color, opacity);
                     ctx.fill();
                     
                     // Glow layers with adjusted opacity
@@ -797,32 +797,32 @@ export const onHitEffectsMap = {
                     // Middle aura with softer gradient
                 const middleGlow = ctx.createRadialGradient(0, 0, p.size, 0, 0, p.size * 2);
                 middleGlow.addColorStop(0, changeColorAlpha(p.color, opacity * 0.2));
-                    middleGlow.addColorStop(0.5, `rgba(255, 50, 0, ${opacity * 0.1})`);
-                    middleGlow.addColorStop(1, `rgba(255, 0, 0, 0)`);
+                middleGlow.addColorStop(0.5, `rgba(255, 50, 0, ${opacity * 0.1})`);
+                middleGlow.addColorStop(1, `rgba(255, 0, 0, 0)`);
                     
                     ctx.beginPath();
                 ctx.arc(0, 0, p.size * 2, 0, Math.PI * 2);
-                    ctx.fillStyle = middleGlow;
-                    ctx.fill();
+                ctx.fillStyle = middleGlow;
+                ctx.fill();
                     
-                    // Outer aura with softer gradient
-                    const outerGlow = ctx.createRadialGradient(
-                    0, 0, p.size * 1.5,
-                    0, 0, p.size * (2.5 + Math.sin(p.time * 0.5) * 0.3)
-                    );
+                // Outer aura with softer gradient
+                const outerGlow = ctx.createRadialGradient(
+                0, 0, p.size * 1.5,
+                0, 0, p.size * (2.5 + Math.sin(p.time * 0.5) * 0.3)
+                );
                 outerGlow.addColorStop(0, changeColorAlpha(p.color, opacity * 0.1));
-                    outerGlow.addColorStop(0.5, `rgba(200, 0, 0, ${opacity * 0.03})`);
-                    outerGlow.addColorStop(1, `rgba(150, 0, 0, 0)`);
-                    
-                    ctx.beginPath();
+                outerGlow.addColorStop(0.5, `rgba(200, 0, 0, ${opacity * 0.03})`);
+                outerGlow.addColorStop(1, `rgba(150, 0, 0, 0)`);
+                
+                ctx.beginPath();
                 ctx.arc(0, 0, p.size * (2.5 + Math.sin(p.time * 0.5) * 0.3), 0, Math.PI * 2);
-                    ctx.fillStyle = outerGlow;
-                    ctx.fill();
-                    
-                    // Reset composite operation
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.restore();
-                }
+                ctx.fillStyle = outerGlow;
+                ctx.fill();
+                
+                // Reset composite operation
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.restore();
+            }
         }
     },
     "tornado": {
@@ -874,7 +874,7 @@ export const onHitEffectsMap = {
                 }
             }
 
-            p.life -= 3;
+            p.life -= 3 / p.fpsFactor;
 
             if (p.life > 0) {
                 const alpha = p.life;
@@ -883,9 +883,9 @@ export const onHitEffectsMap = {
                     const heightRatio = particle.height / p.maxHeight;
                     const currentSpeed = particle.baseSpeed * Math.pow(1 - heightRatio, 3);
                     
-                    particle.angle += p.frequency * currentSpeed * p.timeSpeed;
+                    particle.angle += p.frequency * currentSpeed * p.timeSpeed * p.fpsFactor;
                     particle.radius += (Math.random() - 0.5) * 0.5;
-                    particle.height += 1.5 * p.timeSpeed;
+                    particle.height += 1.5 * p.timeSpeed * p.fpsFactor;
 
                     // Add leaf-like movement
                     particle.rotation += particle.rotationSpeed;
@@ -968,7 +968,7 @@ export const onHitEffectsMap = {
         x: p => p.x,
         y: p => p.y,
         size: p =>(1 * Math.random() + 5) * p.size,
-        life: p => 1000 * p.size,
+        life: p => 500 * p.size,
         draw: (ctx, p) => {
             if (!p.initialized) {
                 p.initialized = true;
@@ -998,12 +998,12 @@ export const onHitEffectsMap = {
                         x: p.x,
                         y: p.y,
                         angle: finalAngle,
-                        speed: (Math.random() * 2 + 1) * Math.sqrt(p.size), // Reduced initial speed
+                        speed: (Math.random() * 2 + 1) * Math.sqrt(p.size) * p.fpsFactor, // Reduced initial speed
                         size: baseSize * sizeVariation,
                         initialSize: baseSize * sizeVariation,
-                        life: 1000 * p.size,
-                        maxLife: 1000 * p.size,
-                        gravity: 0.1,
+                        life: 500 * p.size,
+                        maxLife: 500 * p.size,
+                        gravity: 0.05,
                         points: points,
                         shapeAngle: Math.floor(Math.random() * 6),
                         rotationSpeed: (Math.random() - 0.5) * 0.05, // Add rotation speed
@@ -1013,7 +1013,7 @@ export const onHitEffectsMap = {
                 }
             }
 
-            p.life -= 2;
+            p.life -= 10 / p.fpsFactor;
             
             // Update and draw particles
             p.particles.forEach(particle => {
@@ -1028,11 +1028,11 @@ export const onHitEffectsMap = {
                 // Update rotation
                 particle.shapeAngle += particle.rotationSpeed;
                 
-                particle.life -= 2;
+                particle.life -= 10 / p.fpsFactor;
                 
                 const lifeRatio = particle.life / particle.maxLife;
                 const opacity = Math.pow(lifeRatio, 0.5);
-                particle.size = particle.initialSize * Math.pow(lifeRatio, 2);
+                particle.size = particle.initialSize * Math.pow(lifeRatio, 0.5);
 
                 if (particle.life > 0) {
                     ctx.save();
@@ -1070,7 +1070,7 @@ export const onHitEffectsMap = {
         angle: p => Math.random() * Math.PI * 2,
         curveAmount: p => 5.3 * p.size * 2,
         distance: p => 60 * p.size,
-        alpha: p => 0.8,
+        alpha: p => 1,
         draw: (ctx, p) => {
             if (!p.initialized) {
                 p.initialized = true;
@@ -1078,7 +1078,7 @@ export const onHitEffectsMap = {
                 p.fadeStartTime = 0;
                 p.isSlashing = true;
                 p.progress = 0;
-                p.speed = (Math.random() * 10 + 4) * Math.sqrt(p.size) * 0.01;
+                p.speed = (Math.random() * 10 + 4) * Math.sqrt(p.size) * 0.01 * p.fpsFactor;
                 p.angle = Math.random() * Math.PI * 2;
                 p.curveAmount = 5.3 * p.size * 2;
                 p.distance = 60 * p.size;
@@ -1086,8 +1086,8 @@ export const onHitEffectsMap = {
                 p.totalPoints = Math.max(30, Math.min(100, Math.floor(p.distance / 2)));
             }
 
-            p.life -= 3;
-            const alpha = Math.min(1, p.life / 600);
+            p.life -= 3 / p.fpsFactor;
+            const alpha = Math.pow(Math.min(1, p.life / p.maxLife), 0.5);
 
             if (p.life > 0) {
                 if (p.isSlashing) {
