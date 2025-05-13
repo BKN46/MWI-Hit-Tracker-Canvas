@@ -601,8 +601,10 @@ export const projectileEffectsMap = {
         }
     },
     'blunt': {
-        speedFactor: 1,
+        speedFactor: 2,
+        gravity: -0.1,
         trailLength: 20,
+        
         shake: true,
         onHit: {
             "shatter": (size) => Math.min(Math.ceil(size * 5), 10),
