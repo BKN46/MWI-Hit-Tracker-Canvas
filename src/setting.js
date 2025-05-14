@@ -487,7 +487,7 @@ export function readSettings() {
                     settingsMap[option.id].g = option.g;
                     settingsMap[option.id].b = option.b;
                 }
-            } else if(option && option.value && option.id && settingsMap[option.id]) {
+            } else if(option && option.id && settingsMap[option.id]) {
                 settingsMap[option.id].value = option.value;
             }
         }

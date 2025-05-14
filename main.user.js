@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.2.0
+// @version        1.2.1
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1800,7 +1800,7 @@
 	          settingsMap[option.id].g = option.g;
 	          settingsMap[option.id].b = option.b;
 	        }
-	      } else if (option && option.value && option.id && settingsMap[option.id]) {
+	      } else if (option && option.id && settingsMap[option.id]) {
 	        settingsMap[option.id].value = option.value;
 	      }
 	    }
