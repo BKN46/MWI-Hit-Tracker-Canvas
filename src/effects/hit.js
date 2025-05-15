@@ -131,35 +131,18 @@ export const onHitEffectsMap = {
         speed: (p) => 0,
         gravity: (p) => -0.008 * Math.random() - 0.008,
         draw: (ctx, p) => {
-            if (!p.initialized) {
-                p.initialized = true;
-                p.rotation = Math.random() * Math.PI * 2;
-                p.rotationSpeed = (Math.random() - 0.5) * 0.05;
-            }
-
             p.speed += p.gravity * p.fpsFactor;
             p.y += p.speed * p.fpsFactor;
             p.life -= 3 / p.fpsFactor;
-            p.rotation += p.rotationSpeed;
 
             if (p.life > 0) {
                 ctx.save();
                 ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotation);
-                
-                // Draw the magnet shape
-                shapes.magnet(ctx, {
-                    x: 0,
-                    y: 0,
-                    size: p.size,
-                    angle: 0
-                });
 
-                // Add green overlay using multiply blend mode
-                ctx.globalCompositeOperation = 'multiply';
-                ctx.fillStyle = `rgba(144, 238, 144, ${0.5 * (p.life / p.maxLife)})`;
-                ctx.fill();
-                
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size / 2, -p.size * 2, p.size, p.size * 4);
+                ctx.fillRect(-p.size * 2, -p.size / 2, p.size * 4, p.size);
+
                 ctx.restore();
             }
         }
