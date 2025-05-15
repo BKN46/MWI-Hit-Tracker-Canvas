@@ -131,18 +131,35 @@ export const onHitEffectsMap = {
         speed: (p) => 0,
         gravity: (p) => -0.008 * Math.random() - 0.008,
         draw: (ctx, p) => {
+            if (!p.initialized) {
+                p.initialized = true;
+                p.rotation = Math.random() * Math.PI * 2;
+                p.rotationSpeed = (Math.random() - 0.5) * 0.05;
+            }
+
             p.speed += p.gravity * p.fpsFactor;
             p.y += p.speed * p.fpsFactor;
             p.life -= 3 / p.fpsFactor;
+            p.rotation += p.rotationSpeed;
 
             if (p.life > 0) {
                 ctx.save();
                 ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                
+                // Draw the magnet shape
+                shapes.magnet(ctx, {
+                    x: 0,
+                    y: 0,
+                    size: p.size,
+                    angle: 0
+                });
 
-                ctx.fillStyle = p.color;
-                ctx.fillRect(-p.size / 2, -p.size * 2, p.size, p.size * 4);
-                ctx.fillRect(-p.size * 2, -p.size / 2, p.size * 4, p.size);
-
+                // Add green overlay using multiply blend mode
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.fillStyle = `rgba(144, 238, 144, ${0.5 * (p.life / p.maxLife)})`;
+                ctx.fill();
+                
                 ctx.restore();
             }
         }
@@ -431,6 +448,74 @@ export const onHitEffectsMap = {
                     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
                     ctx.fillStyle = p.color.replace('0.8', opacity.toString());
                     ctx.fill();
+                }
+            });
+        }
+    },
+    "magnet": {
+        x: p => p.x,
+        y: p => p.y,
+        size: p => (2 * Math.random() + 20) * p.size,
+        life: p => 800 * p.size,
+        draw: (ctx, p) => {
+            if (!p.initialized) {
+                p.initialized = true;
+                p.particles = [];
+                // Create particles in a circular pattern
+                const particleCount = 5; // Fewer particles for magnets
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (i / particleCount) * Math.PI * 2;
+                    // Add some random variation to the angle
+                    const angleVariation = (Math.random() - 0.5) * 0.5;
+                    const finalAngle = angle + angleVariation;
+                    
+                    // Create size variation
+                    const sizeVariation = Math.random() * 1.5 + 0.5;
+                    const baseSize = (Math.random() * 0.8 + 0.4) * p.size;
+                    
+                    p.particles.push({
+                        x: p.x,
+                        y: p.y,
+                        angle: finalAngle,
+                        speed: (Math.random() * 1.5 + 1) * Math.sqrt(p.size),
+                        size: baseSize * sizeVariation,
+                        initialSize: baseSize * sizeVariation,
+                        life: 800 * p.size,
+                        gravity: 0.3 + (Math.random() * 0.2 - 0.1), // Less gravity for magnets
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() - 0.5) * 0.02
+                    });
+                }
+            }
+
+            p.life -= 2 / p.fpsFactor;
+            
+            // Update and draw particles
+            p.particles.forEach(particle => {
+                particle.speed *= 0.96;
+                particle.x += Math.cos(particle.angle) * particle.speed;
+                particle.y += Math.sin(particle.angle) * particle.speed + particle.gravity;
+                particle.life -= 1;
+                particle.rotation += particle.rotationSpeed;
+                
+                const lifeRatio = particle.life / (800 * p.size);
+                const opacity = lifeRatio * 0.8;
+                particle.size = particle.initialSize * Math.pow(lifeRatio, 2);
+
+                if (particle.life > 0) {
+                    ctx.save();
+                    ctx.translate(particle.x, particle.y);
+                    ctx.rotate(particle.rotation);
+                    
+                    // Use the magnet shape from shape.js
+                    shapes.magnet(ctx, {
+                        x: 0,
+                        y: 0,
+                        size: particle.size,
+                        color: `rgba(128, 128, 128, ${opacity})`
+                    });
+                    
+                    ctx.restore();
                 }
             });
         }
