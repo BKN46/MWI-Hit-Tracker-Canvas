@@ -435,6 +435,74 @@ export const onHitEffectsMap = {
             });
         }
     },
+    "magnet": {
+        x: p => p.x,
+        y: p => p.y,
+        size: p => (2 * Math.random() + 20) * p.size,
+        life: p => 800 * p.size,
+        draw: (ctx, p) => {
+            if (!p.initialized) {
+                p.initialized = true;
+                p.particles = [];
+                // Create particles in a circular pattern
+                const particleCount = 5; // Fewer particles for magnets
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (i / particleCount) * Math.PI * 2;
+                    // Add some random variation to the angle
+                    const angleVariation = (Math.random() - 0.5) * 0.5;
+                    const finalAngle = angle + angleVariation;
+                    
+                    // Create size variation
+                    const sizeVariation = Math.random() * 1.5 + 0.5;
+                    const baseSize = (Math.random() * 0.8 + 0.4) * p.size;
+                    
+                    p.particles.push({
+                        x: p.x,
+                        y: p.y,
+                        angle: finalAngle,
+                        speed: (Math.random() * 1.5 + 1) * Math.sqrt(p.size),
+                        size: baseSize * sizeVariation,
+                        initialSize: baseSize * sizeVariation,
+                        life: 800 * p.size,
+                        gravity: 0.3 + (Math.random() * 0.2 - 0.1), // Less gravity for magnets
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() - 0.5) * 0.02
+                    });
+                }
+            }
+
+            p.life -= 2 / p.fpsFactor;
+            
+            // Update and draw particles
+            p.particles.forEach(particle => {
+                particle.speed *= 0.96;
+                particle.x += Math.cos(particle.angle) * particle.speed;
+                particle.y += Math.sin(particle.angle) * particle.speed + particle.gravity;
+                particle.life -= 1;
+                particle.rotation += particle.rotationSpeed;
+                
+                const lifeRatio = particle.life / (800 * p.size);
+                const opacity = lifeRatio * 0.8;
+                particle.size = particle.initialSize * Math.pow(lifeRatio, 2);
+
+                if (particle.life > 0) {
+                    ctx.save();
+                    ctx.translate(particle.x, particle.y);
+                    ctx.rotate(particle.rotation);
+                    
+                    // Use the magnet shape from shape.js
+                    shapes.magnet(ctx, {
+                        x: 0,
+                        y: 0,
+                        size: particle.size,
+                        color: `rgba(128, 128, 128, ${opacity})`
+                    });
+                    
+                    ctx.restore();
+                }
+            });
+        }
+    },
     "star": {
         x: p => p.x + (Math.random() - 0.5) * 60,
         y: p => p.y + (Math.random() - 0.5) * 10,

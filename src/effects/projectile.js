@@ -1,5 +1,6 @@
 import { changeColorAlpha } from "./utils.js";
 import { onHitEffectsMap } from './hit.js';
+import { shapes } from './shape.js';
 
 /*
 特效编写请查阅
@@ -250,7 +251,7 @@ export const projectileEffectsMap = {
         trailLength: 3,
         shake: true,
         onHit: {
-            "crescentSlash": (size) => Math.min(Math.ceil(size * 3), 6),
+            "magnet": (size) => Math.min(Math.ceil(size * 3), 6),
         },
         draw: (ctx, p) => {
             ctx.beginPath();
@@ -629,5 +630,46 @@ export const projectileEffectsMap = {
             ctx.fill();
         }
         
-    }
+    },
+    'magneteer': {
+        speedFactor: 0.8,
+        trailLength: 40,
+        gravity: -0.001,
+        shake: true,
+        onHit: {
+            "magnet": (size) => Math.min(Math.ceil(size * 2), 6),
+            "shockwave": (size) => Math.min(Math.ceil(size), 2),
+        },
+        draw: (ctx, p) => {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            // Combine direction and continuous spin
+            const direction = Math.atan2(p.velocity.y, p.velocity.x);
+            const spin = (p.life * 0.05) % (Math.PI * 2); // Slower continuous spin
+            ctx.rotate(direction + spin);
+            
+            // Use the magnet shape from shape.js
+            shapes.magnet(ctx, {
+                x: 0,
+                y: 0,
+                size: p.size * 2,
+                angle: 0
+            });
+            
+            ctx.restore();
+        },
+        trail: (ctx, p, i) => {
+            const alpha = Math.min(i / p.totalLength, 1);
+            p.x = p.x + (Math.random() - 0.5) * 5;
+            p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
+            ctx.beginPath();
+            const lineWidth = p.size * Math.sqrt(alpha);
+            ctx.strokeStyle = `${changeColorAlpha(p.color, alpha)}`;
+            ctx.lineWidth = lineWidth;
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20);
+            ctx.stroke();
+            ctx.fill();
+        }
+    },
 }

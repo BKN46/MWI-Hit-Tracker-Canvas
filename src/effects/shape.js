@@ -146,5 +146,59 @@ export const shapes = {
         ctx.fillStyle = p.color;
         ctx.fill();
         ctx.restore();
+    },
+    "magnet": (ctx, p={}) => {
+        // {x, y, size, color, angle}
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle || 0);
+        
+        // Set stroke properties
+        ctx.lineCap = 'butt';  // Makes strokes end exactly at the specified points
+        ctx.lineWidth = p.size * 0.7;  // Equivalent to strokeWeight(35)
+        
+        // Draw left L shape (red)
+        ctx.strokeStyle = 'rgb(255, 50, 50)';  // Muted red
+        ctx.beginPath();
+        // Vertical part
+        ctx.moveTo(-p.size, -p.size);
+        ctx.lineTo(-p.size, 0);
+        // Horizontal part with curve
+        ctx.bezierCurveTo(
+            -p.size, p.size,     // Control point 1: (150, 300)
+            -p.size/3, p.size,   // Control point 2: (200, 300)
+            0, p.size    // End point: (200, 300)
+        );
+        ctx.stroke();
+        
+        // Draw right L shape (blue)
+        ctx.strokeStyle = 'rgb(50, 50, 255)';  // Muted blue
+        ctx.beginPath();
+        // Vertical part
+        ctx.moveTo(p.size, -p.size);
+        ctx.lineTo(p.size, 0);
+        // Horizontal part with curve
+        ctx.bezierCurveTo(
+            p.size, p.size,      // Control point 1: (250, 300)
+            p.size/3, p.size,    // Control point 2: (200, 300)
+            0, p.size     // End point: (200, 300)
+        );
+        ctx.stroke();
+
+        // Draw short grey lines
+        ctx.strokeStyle = 'grey';
+        // Left grey line
+        ctx.beginPath();
+        ctx.moveTo(-p.size, -p.size);
+        ctx.lineTo(-p.size, -p.size/0.6);
+        ctx.stroke();
+
+        // Right grey line
+        ctx.beginPath();
+        ctx.moveTo(p.size, -p.size);
+        ctx.lineTo(p.size, -p.size/0.6);
+        ctx.stroke();
+        
+        ctx.restore();
     }
 }
