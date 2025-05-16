@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.2.1
+// @version        1.2.2
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -2027,6 +2027,61 @@
 	    ctx.fillStyle = p.color;
 	    ctx.fill();
 	    ctx.restore();
+	  },
+	  "magnet": (ctx, p = {}) => {
+	    // {x, y, size, color, angle}
+	    ctx.save();
+	    ctx.translate(p.x, p.y);
+	    ctx.rotate(p.angle || 0);
+
+	    // Set stroke properties
+	    ctx.lineCap = 'butt'; // Makes strokes end exactly at the specified points
+	    ctx.lineWidth = p.size * 0.7; // Equivalent to strokeWeight(35)
+
+	    // Draw left L shape (red)
+	    ctx.strokeStyle = 'rgb(255, 50, 50)'; // Muted red
+	    ctx.beginPath();
+	    // Vertical part
+	    ctx.moveTo(-p.size, -p.size);
+	    ctx.lineTo(-p.size, 0);
+	    // Horizontal part with curve
+	    ctx.bezierCurveTo(-p.size, p.size,
+	    // Control point 1: (150, 300)
+	    -p.size / 3, p.size,
+	    // Control point 2: (200, 300)
+	    0, p.size // End point: (200, 300)
+	    );
+	    ctx.stroke();
+
+	    // Draw right L shape (blue)
+	    ctx.strokeStyle = 'rgb(50, 50, 255)'; // Muted blue
+	    ctx.beginPath();
+	    // Vertical part
+	    ctx.moveTo(p.size, -p.size);
+	    ctx.lineTo(p.size, 0);
+	    // Horizontal part with curve
+	    ctx.bezierCurveTo(p.size, p.size,
+	    // Control point 1: (250, 300)
+	    p.size / 3, p.size,
+	    // Control point 2: (200, 300)
+	    0, p.size // End point: (200, 300)
+	    );
+	    ctx.stroke();
+
+	    // Draw short grey lines
+	    ctx.strokeStyle = 'grey';
+	    // Left grey line
+	    ctx.beginPath();
+	    ctx.moveTo(-p.size, -p.size);
+	    ctx.lineTo(-p.size, -p.size / 0.6);
+	    ctx.stroke();
+
+	    // Right grey line
+	    ctx.beginPath();
+	    ctx.moveTo(p.size, -p.size);
+	    ctx.lineTo(p.size, -p.size / 0.6);
+	    ctx.stroke();
+	    ctx.restore();
 	  }
 	};
 
@@ -2419,6 +2474,70 @@
 	          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
 	          ctx.fillStyle = p.color.replace('0.8', opacity.toString());
 	          ctx.fill();
+	        }
+	      });
+	    }
+	  },
+	  "magnet": {
+	    x: p => p.x,
+	    y: p => p.y,
+	    size: p => (2 * Math.random() + 20) * p.size,
+	    life: p => 800 * p.size,
+	    draw: (ctx, p) => {
+	      if (!p.initialized) {
+	        p.initialized = true;
+	        p.particles = [];
+	        // Create particles in a circular pattern
+	        const particleCount = 5; // Fewer particles for magnets
+	        for (let i = 0; i < particleCount; i++) {
+	          const angle = i / particleCount * Math.PI * 2;
+	          // Add some random variation to the angle
+	          const angleVariation = (Math.random() - 0.5) * 0.5;
+	          const finalAngle = angle + angleVariation;
+
+	          // Create size variation
+	          const sizeVariation = Math.random() * 1.5 + 0.5;
+	          const baseSize = (Math.random() * 0.8 + 0.4) * p.size;
+	          p.particles.push({
+	            x: p.x,
+	            y: p.y,
+	            angle: finalAngle,
+	            speed: (Math.random() * 1.5 + 1) * Math.sqrt(p.size),
+	            size: baseSize * sizeVariation,
+	            initialSize: baseSize * sizeVariation,
+	            life: 800 * p.size,
+	            gravity: 0.3 + (Math.random() * 0.2 - 0.1),
+	            // Less gravity for magnets
+	            rotation: Math.random() * Math.PI * 2,
+	            rotationSpeed: (Math.random() - 0.5) * 0.02
+	          });
+	        }
+	      }
+	      p.life -= 2 / p.fpsFactor;
+
+	      // Update and draw particles
+	      p.particles.forEach(particle => {
+	        particle.speed *= 0.96;
+	        particle.x += Math.cos(particle.angle) * particle.speed;
+	        particle.y += Math.sin(particle.angle) * particle.speed + particle.gravity;
+	        particle.life -= 1;
+	        particle.rotation += particle.rotationSpeed;
+	        const lifeRatio = particle.life / (800 * p.size);
+	        const opacity = lifeRatio * 0.8;
+	        particle.size = particle.initialSize * Math.pow(lifeRatio, 2);
+	        if (particle.life > 0) {
+	          ctx.save();
+	          ctx.translate(particle.x, particle.y);
+	          ctx.rotate(particle.rotation);
+
+	          // Use the magnet shape from shape.js
+	          shapes.magnet(ctx, {
+	            x: 0,
+	            y: 0,
+	            size: particle.size,
+	            color: `rgba(128, 128, 128, ${opacity})`
+	          });
+	          ctx.restore();
 	        }
 	      });
 	    }
@@ -3365,7 +3484,7 @@
 	    trailLength: 3,
 	    shake: true,
 	    onHit: {
-	      "crescentSlash": size => Math.min(Math.ceil(size * 3), 6)
+	      "magnet": size => Math.min(Math.ceil(size * 3), 6)
 	    },
 	    draw: (ctx, p) => {
 	      ctx.beginPath();
@@ -3694,6 +3813,46 @@
 	      ctx.beginPath();
 	      ctx.arc(p.x, p.y, trailSize * 2, 0, Math.PI * 2);
 	      ctx.fillStyle = changeColorAlpha(p.color, alpha);
+	      ctx.fill();
+	    }
+	  },
+	  'magneteer': {
+	    speedFactor: 0.8,
+	    trailLength: 40,
+	    gravity: -0.001,
+	    shake: true,
+	    onHit: {
+	      "magnet": size => Math.min(Math.ceil(size * 2), 6),
+	      "shockwave": size => Math.min(Math.ceil(size), 2)
+	    },
+	    draw: (ctx, p) => {
+	      ctx.save();
+	      ctx.translate(p.x, p.y);
+	      // Combine direction and continuous spin
+	      const direction = Math.atan2(p.velocity.y, p.velocity.x);
+	      const spin = p.life * 0.05 % (Math.PI * 2); // Slower continuous spin
+	      ctx.rotate(direction + spin);
+
+	      // Use the magnet shape from shape.js
+	      shapes.magnet(ctx, {
+	        x: 0,
+	        y: 0,
+	        size: p.size * 2,
+	        angle: 0
+	      });
+	      ctx.restore();
+	    },
+	    trail: (ctx, p, i) => {
+	      const alpha = Math.min(i / p.totalLength, 1);
+	      p.x = p.x + (Math.random() - 0.5) * 5;
+	      p.y = p.y - (Math.random() - 0.5) * 1 + 0.02;
+	      ctx.beginPath();
+	      const lineWidth = p.size * Math.sqrt(alpha);
+	      ctx.strokeStyle = `${changeColorAlpha(p.color, alpha)}`;
+	      ctx.lineWidth = lineWidth;
+	      ctx.moveTo(p.x, p.y);
+	      ctx.lineTo(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20);
+	      ctx.stroke();
 	      ctx.fill();
 	    }
 	  }
