@@ -51,28 +51,6 @@ export function animate() {
     fps = Math.round(fpsQueue.reduce((a, b) => a + b) / fpsQueue.length);
     fps = Math.min(Math.max(fps, 10), 300);
 
-    if (settingsMap.showFps.value) {
-        const fpsElement = document.querySelector('#hitTracker_fpsCounter');
-        if (fpsElement) {
-            fpsElement.innerText = `FPS: ${fps}`;
-        } else {
-            const parenetElement = document.querySelector(".BattlePanel_battleArea__U9hij");
-            if (parenetElement) {
-                const newFpsElement = document.createElement('div');
-                const center = getElementCenter(parenetElement);
-                newFpsElement.id = 'hitTracker_fpsCounter';
-                newFpsElement.style.position = 'fixed';
-                newFpsElement.style.top = `${center.x - parenetElement.innerWidth}px`;
-                newFpsElement.style.left = `${center.y - parenetElement.innerHeight}px`;
-                newFpsElement.style.color = 'rgba(200, 200, 200, 0.8)';
-                newFpsElement.style.zIndex = '9999';
-                newFpsElement.innerText = `FPS: ${fps}`;
-                parenetElement.appendChild(newFpsElement);
-            }
-        }
-    }
-
-
     // 完全清空画布
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -289,6 +267,10 @@ function createOnHitEffect(projectile) {
     const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
     const fpsFactor = getFpsFactor();
 
+    // 存储命中动画的活跃状态，用于跟踪
+    const damageTextLifespan = settingsMap.damageTextLifespan.value || 120;
+    const lifeSpan = Math.ceil(damageTextLifespan / Math.pow(fpsFactor, 0.33));
+
     const effects = [];
 
     let onHitEffect = projectile.effect.onHit;
@@ -304,7 +286,8 @@ function createOnHitEffect(projectile) {
         const effectCount = Math.ceil(onHitEffect[effectName](projectile.size) * particleFactor);
         for (let i = 0; i < effectCount; i++) {
             const effectSize = (effect.size ? effect.size(projectile) : Math.random() * 10 + 5) * sizeFactor;
-            const effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / Math.pow(fpsFactor, 0.33));
+            let effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / Math.pow(fpsFactor, 0.33));
+            // effectLife = Math.min(effectLife, lifeSpan);
             const effectSpeed = Math.ceil((effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2) / Math.pow(fpsFactor, 0.33) * particleSpeedFactor);
 
             effects.push({
@@ -323,10 +306,6 @@ function createOnHitEffect(projectile) {
             });
         }
     }
-
-    // 存储命中动画的活跃状态，用于跟踪
-    const damageTextLifespan = settingsMap.damageTextLifespan.value || 120;
-    const lifeSpan = Math.ceil(damageTextLifespan / Math.pow(fpsFactor, 0.33));
 
     const onHitEffectData = {
         effects: [...effects],
@@ -470,3 +449,37 @@ export function createProjectile(startElement, endElement, color, initialSpeed =
         projectiles.shift();
     }
 }
+
+// 其他低频DOM操作
+setInterval(() => {
+    if (settingsMap.showFps.value) {
+        const fpsElement = document.querySelector('#hitTracker_fpsCounter');
+        if (fpsElement) {
+            fpsElement.innerText = `FPS: ${fps}`;
+        } else {
+            const parenetElement = document.querySelector(".BattlePanel_battleArea__U9hij");
+            if (parenetElement) {
+                const newFpsElement = document.createElement('div');
+                const center = getElementCenter(parenetElement);
+                newFpsElement.id = 'hitTracker_fpsCounter';
+                newFpsElement.style.position = 'fixed';
+                newFpsElement.style.top = `${center.x - parenetElement.innerWidth}px`;
+                newFpsElement.style.left = `${center.y - parenetElement.innerHeight}px`;
+                newFpsElement.style.color = 'rgba(200, 200, 200, 0.8)';
+                newFpsElement.style.zIndex = '9999';
+                newFpsElement.innerText = `FPS: ${fps}`;
+                parenetElement.appendChild(newFpsElement);
+            }
+        }
+    }
+
+    if (settingsMap.verticalCombatDisplay.value) {
+        const battleGrids = document.querySelectorAll(".BattlePanel_combatUnitGrid__2hTAM");
+        if (battleGrids) {
+            for (let i = 0; i < battleGrids.length; i++) {
+                const grid = battleGrids[i];
+                grid.style['grid-template-columns'] = `repeat(1,120px)`;
+            }
+        }
+    }
+}, 500);

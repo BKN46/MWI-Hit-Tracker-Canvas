@@ -28,7 +28,7 @@ export const onHitEffectsMap = {
             p.verticalSpeed += p.gravity;
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed + p.verticalSpeed;
-            p.life -= 1 / p.fpsFactor;
+            p.life -= 1;
             p.alpha = Math.max(0, p.alpha - 0.0003 / p.fpsFactor);
             p.rotation += p.rotationSpeed;
             
@@ -345,7 +345,7 @@ export const onHitEffectsMap = {
                 ];
             }
             
-            p.life -= 1 / p.fpsFactor;
+            p.life -= 1;
             
             // Update each ripple
             p.ripples.forEach((ripple, index) => {
@@ -669,7 +669,7 @@ export const onHitEffectsMap = {
                 }
             }
             
-            p.life -= 1 / p.fpsFactor;
+            p.life -= 1;
             const alpha = Math.pow(p.life / p.maxLife, 0.7);
             
             if (p.life > 0) {
@@ -710,7 +710,7 @@ export const onHitEffectsMap = {
             p.speed *= 0.96;
             p.x += Math.cos(p.angle) * p.speed;
             p.y += Math.sin(p.angle) * p.speed;
-            p.life -= 1 / p.fpsFactor;
+            p.life -= 1;
             
             const lifeRatio = p.life / p.maxLife;
             const alpha = Math.pow(lifeRatio, 0.2);
@@ -794,7 +794,7 @@ export const onHitEffectsMap = {
                 p.oringinalSize = p.size;
             }
 
-            p.life -= 1 / p.fpsFactor;
+            p.life -= 1;
 
             p.speed *= 0.98;
             p.x += Math.cos(p.angle) * p.speed;
@@ -897,7 +897,7 @@ export const onHitEffectsMap = {
         x: (p) => p.x,
         y: (p) => p.y + 20,
         size: (p) => 3 * p.size,
-        life: (p) => 1250 * p.size,
+        life: (p) => 2000 * p.size,
         speed: (p) => (Math.random() * 3 + 1) * Math.sqrt(p.size),
         gravity: (p) => 0.12,
         draw: (ctx, p) => {
@@ -906,9 +906,9 @@ export const onHitEffectsMap = {
                 p.particles = [];
                 p.maxParticles = 6;
                 p.amplitude = 60 * p.size;
-                p.frequency = 15;
-                p.timeSpeed = 0.8;
-                p.maxHeight = 100;
+                p.frequency = 7;
+                p.timeSpeed = 0.4;
+                p.maxHeight = 200 * p.size;
                 
                 // Parse the base color once
                 const colorMatch = p.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
@@ -942,10 +942,10 @@ export const onHitEffectsMap = {
                 }
             }
 
-            p.life -= 3 / p.fpsFactor;
+            p.life -= 1;
 
             if (p.life > 0) {
-                const alpha = p.life;
+                const alpha = Math.min(p.life / p.maxLife, 1);
                 
                 for (let particle of p.particles) {
                     const heightRatio = particle.height / p.maxHeight;
@@ -997,13 +997,13 @@ export const onHitEffectsMap = {
                     ctx.rotate(particle.rotation);
                     ctx.beginPath();
                     ctx.arc(0, 0, currentSize, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha * 0.8})`;
+                    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha})`;
                     ctx.fill();
 
                     // Add glow effect with size reduction
                     ctx.beginPath();
                     ctx.arc(0, 0, currentSize * 1.5, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha * 0.3})`;
+                    ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha * 0.5})`;
                     ctx.fill();
                     ctx.restore();
                 }

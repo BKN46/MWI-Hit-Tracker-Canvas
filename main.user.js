@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name           MWI-Hit-Tracker-Canvas
 // @namespace      MWI-Hit-Tracker-Canvas
-// @version        1.2.2
+// @version        1.2.3
 // @author         Artintel, BKN46
 // @description    A Tampermonkey script to track MWI hits on Canvas
 // @icon           https://www.milkywayidle.com/favicon.svg
@@ -1507,6 +1507,11 @@
 	    desc: isZH ? "显示玩家被动回复效果" : "Show Self Regeneration",
 	    value: true
 	  },
+	  verticalCombatDisplay: {
+	    id: "verticalCombatDisplay",
+	    desc: isZH ? "战斗排列垂直展示" : "Display Comabt Vertically",
+	    value: false
+	  },
 	  monsterDeadAnimation: {
 	    id: "monsterDeadAnimation",
 	    desc: isZH ? "怪物死亡效果" : "Monster Dead Animation",
@@ -2111,7 +2116,7 @@
 	      p.verticalSpeed += p.gravity;
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.verticalSpeed;
-	      p.life -= 1 / p.fpsFactor;
+	      p.life -= 1;
 	      p.alpha = Math.max(0, p.alpha - 0.0003 / p.fpsFactor);
 	      p.rotation += p.rotationSpeed;
 	      if (p.life > 0) {
@@ -2389,7 +2394,7 @@
 	        } // Slow, faint outer ripple
 	        ];
 	      }
-	      p.life -= 1 / p.fpsFactor;
+	      p.life -= 1;
 
 	      // Update each ripple
 	      p.ripples.forEach((ripple, index) => {
@@ -2731,7 +2736,7 @@
 	          });
 	        }
 	      }
-	      p.life -= 1 / p.fpsFactor;
+	      p.life -= 1;
 	      const alpha = Math.pow(p.life / p.maxLife, 0.7);
 	      if (p.life > 0) {
 	        // Draw main poison cloud
@@ -2770,7 +2775,7 @@
 	      p.speed *= 0.96;
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed;
-	      p.life -= 1 / p.fpsFactor;
+	      p.life -= 1;
 	      const lifeRatio = p.life / p.maxLife;
 	      const alpha = Math.pow(lifeRatio, 0.2);
 	      if (p.life > 0) {
@@ -2850,7 +2855,7 @@
 	        p.rotationSpeed = (Math.random() - 0.5) * 0.05;
 	        p.oringinalSize = p.size;
 	      }
-	      p.life -= 1 / p.fpsFactor;
+	      p.life -= 1;
 	      p.speed *= 0.98;
 	      p.x += Math.cos(p.angle) * p.speed;
 	      p.y += Math.sin(p.angle) * p.speed + p.gravity;
@@ -2941,7 +2946,7 @@
 	    x: p => p.x,
 	    y: p => p.y + 20,
 	    size: p => 3 * p.size,
-	    life: p => 1250 * p.size,
+	    life: p => 2000 * p.size,
 	    speed: p => (Math.random() * 3 + 1) * Math.sqrt(p.size),
 	    gravity: p => 0.12,
 	    draw: (ctx, p) => {
@@ -2950,9 +2955,9 @@
 	        p.particles = [];
 	        p.maxParticles = 6;
 	        p.amplitude = 60 * p.size;
-	        p.frequency = 15;
-	        p.timeSpeed = 0.8;
-	        p.maxHeight = 100;
+	        p.frequency = 7;
+	        p.timeSpeed = 0.4;
+	        p.maxHeight = 200 * p.size;
 
 	        // Parse the base color once
 	        const colorMatch = p.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
@@ -2985,9 +2990,9 @@
 	          });
 	        }
 	      }
-	      p.life -= 3 / p.fpsFactor;
+	      p.life -= 1;
 	      if (p.life > 0) {
-	        const alpha = p.life;
+	        const alpha = Math.min(p.life / p.maxLife, 1);
 	        for (let particle of p.particles) {
 	          const heightRatio = particle.height / p.maxHeight;
 	          const currentSpeed = particle.baseSpeed * Math.pow(1 - heightRatio, 3);
@@ -3032,13 +3037,13 @@
 	          ctx.rotate(particle.rotation);
 	          ctx.beginPath();
 	          ctx.arc(0, 0, currentSize, 0, Math.PI * 2);
-	          ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha * 0.8})`;
+	          ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha})`;
 	          ctx.fill();
 
 	          // Add glow effect with size reduction
 	          ctx.beginPath();
 	          ctx.arc(0, 0, currentSize * 1.5, 0, Math.PI * 2);
-	          ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha * 0.3})`;
+	          ctx.fillStyle = `rgba(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)}, ${alpha * 0.5})`;
 	          ctx.fill();
 	          ctx.restore();
 	        }
@@ -3901,7 +3906,7 @@
 	  lifespan = 120,
 	  color = "rgba(255, 255, 255, 0.8)",
 	  otherInfo = {},
-	  isFpsOptimization = false
+	  isFpsOptimized = false
 	}) {
 	  activeEffects.push({
 	    effects,
@@ -3910,7 +3915,7 @@
 	    lifespan,
 	    color,
 	    otherInfo,
-	    isFpsOptimization
+	    isFpsOptimized
 	  });
 	}
 	function clearEffects() {
@@ -4205,26 +4210,6 @@
 	  }
 	  fps = Math.round(fpsQueue.reduce((a, b) => a + b) / fpsQueue.length);
 	  fps = Math.min(Math.max(fps, 10), 300);
-	  if (settingsMap.showFps.value) {
-	    const fpsElement = document.querySelector('#hitTracker_fpsCounter');
-	    if (fpsElement) {
-	      fpsElement.innerText = `FPS: ${fps}`;
-	    } else {
-	      const parenetElement = document.querySelector(".BattlePanel_battleArea__U9hij");
-	      if (parenetElement) {
-	        const newFpsElement = document.createElement('div');
-	        const center = getElementCenter(parenetElement);
-	        newFpsElement.id = 'hitTracker_fpsCounter';
-	        newFpsElement.style.position = 'fixed';
-	        newFpsElement.style.top = `${center.x - parenetElement.innerWidth}px`;
-	        newFpsElement.style.left = `${center.y - parenetElement.innerHeight}px`;
-	        newFpsElement.style.color = 'rgba(200, 200, 200, 0.8)';
-	        newFpsElement.style.zIndex = '9999';
-	        newFpsElement.innerText = `FPS: ${fps}`;
-	        parenetElement.appendChild(newFpsElement);
-	      }
-	    }
-	  }
 
 	  // 完全清空画布
 	  ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4431,6 +4416,10 @@
 	  const particleSpeedFactor = settingsMap.particleSpeedRatio.value || 1;
 	  const particleLifespanFactor = settingsMap.particleLifespanRatio.value || 1;
 	  const fpsFactor = getFpsFactor();
+
+	  // 存储命中动画的活跃状态，用于跟踪
+	  const damageTextLifespan = settingsMap.damageTextLifespan.value || 120;
+	  const lifeSpan = Math.ceil(damageTextLifespan / Math.pow(fpsFactor, 0.33));
 	  const effects = [];
 	  let onHitEffect = projectile.effect.onHit;
 	  if (projectile.otherInfo.isCrit) {
@@ -4446,7 +4435,8 @@
 	    const effectCount = Math.ceil(onHitEffect[effectName](projectile.size) * particleFactor);
 	    for (let i = 0; i < effectCount; i++) {
 	      const effectSize = (effect.size ? effect.size(projectile) : Math.random() * 10 + 5) * sizeFactor;
-	      const effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / Math.pow(fpsFactor, 0.33));
+	      let effectLife = Math.ceil((effect.life ? effect.life(projectile) : 1000) * particleLifespanFactor / Math.pow(fpsFactor, 0.33));
+	      // effectLife = Math.min(effectLife, lifeSpan);
 	      const effectSpeed = Math.ceil((effect.speed ? effect.speed(projectile) : Math.random() * 5 + 2) / Math.pow(fpsFactor, 0.33) * particleSpeedFactor);
 	      effects.push({
 	        x: effect.x ? effect.x(projectile) : x,
@@ -4464,10 +4454,6 @@
 	      });
 	    }
 	  }
-
-	  // 存储命中动画的活跃状态，用于跟踪
-	  const damageTextLifespan = settingsMap.damageTextLifespan.value || 120;
-	  const lifeSpan = Math.ceil(damageTextLifespan / Math.pow(fpsFactor, 0.33));
 	  const onHitEffectData = {
 	    effects: [...effects],
 	    active: true,
@@ -4598,6 +4584,39 @@
 	    projectiles.shift();
 	  }
 	}
+
+	// 其他低频DOM操作
+	setInterval(() => {
+	  if (settingsMap.showFps.value) {
+	    const fpsElement = document.querySelector('#hitTracker_fpsCounter');
+	    if (fpsElement) {
+	      fpsElement.innerText = `FPS: ${fps}`;
+	    } else {
+	      const parenetElement = document.querySelector(".BattlePanel_battleArea__U9hij");
+	      if (parenetElement) {
+	        const newFpsElement = document.createElement('div');
+	        const center = getElementCenter(parenetElement);
+	        newFpsElement.id = 'hitTracker_fpsCounter';
+	        newFpsElement.style.position = 'fixed';
+	        newFpsElement.style.top = `${center.x - parenetElement.innerWidth}px`;
+	        newFpsElement.style.left = `${center.y - parenetElement.innerHeight}px`;
+	        newFpsElement.style.color = 'rgba(200, 200, 200, 0.8)';
+	        newFpsElement.style.zIndex = '9999';
+	        newFpsElement.innerText = `FPS: ${fps}`;
+	        parenetElement.appendChild(newFpsElement);
+	      }
+	    }
+	  }
+	  if (settingsMap.verticalCombatDisplay.value) {
+	    const battleGrids = document.querySelectorAll(".BattlePanel_combatUnitGrid__2hTAM");
+	    if (battleGrids) {
+	      for (let i = 0; i < battleGrids.length; i++) {
+	        const grid = battleGrids[i];
+	        grid.style['grid-template-columns'] = `repeat(1,120px)`;
+	      }
+	    }
+	  }
+	}, 500);
 
 	// #region Setting
 	waitForSettings({

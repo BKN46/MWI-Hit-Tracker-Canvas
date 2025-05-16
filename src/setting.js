@@ -156,6 +156,11 @@ export let settingsMap = {
         desc: isZH ? "显示玩家被动回复效果":"Show Self Regeneration",
         value: true,
     },
+    verticalCombatDisplay: {
+        id: "verticalCombatDisplay",
+        desc: isZH ? "战斗排列垂直展示":"Display Comabt Vertically",
+        value: false,
+    },
     monsterDeadAnimation: {
         id: "monsterDeadAnimation",
         desc: isZH ? "怪物死亡效果":"Monster Dead Animation",
