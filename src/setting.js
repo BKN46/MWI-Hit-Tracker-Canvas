@@ -158,7 +158,7 @@ export let settingsMap = {
     },
     verticalCombatDisplay: {
         id: "verticalCombatDisplay",
-        desc: isZH ? "战斗排列垂直展示":"Display Comabt Vertically",
+        desc: isZH ? "战斗排列垂直展示":"Display Combat Vertically",
         value: false,
     },
     monsterDeadAnimation: {
